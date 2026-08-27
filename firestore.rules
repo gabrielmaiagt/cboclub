@@ -206,6 +206,11 @@ service cloud.firestore {
     }
 
     // ── Decisoes e tarefas ──────────────────────────────────────────
+    match /recurringCosts/{costId} {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+
     match /decisions/{decisionId} {
       allow read:  if signedIn();
       allow write: if writeOffers();

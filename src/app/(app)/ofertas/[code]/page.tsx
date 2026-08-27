@@ -2,10 +2,14 @@ import { notFound } from "next/navigation";
 
 import { OfferDetail } from "@/features/offers/components/offer-detail";
 import { requireAuth } from "@/lib/auth/guard";
+import { canRead } from "@/lib/auth/permissions";
 import { deriveFrom } from "@/lib/metrics";
 import { derive } from "@/lib/metrics";
 import { listActivityByOffer } from "@/services/firestore/activity.repo";
+import { listChips } from "@/services/firestore/chips.repo";
 import { listCreatives } from "@/services/firestore/creatives.repo";
+import { listExperiments } from "@/services/firestore/experiments.repo";
+import { listLedger } from "@/services/firestore/finance.repo";
 import {
   aggregateOfferTotals,
   listMetricsByOffer,
@@ -28,11 +32,7 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 /**
- * Pagina interna da oferta (§12).
- *
- * Custo por visita: 1 doc da oferta + 2 aggregation queries (totais) +
- * 1 query dos ultimos 30 dias (graficos) + 1 da timeline + 1 de usuarios.
- * Os embutidos (angulos, paginas, campanhas) vieram gratis no doc.
+ * Workspace da oferta (§7): tudo daquela oferta, nada de outras.
  */
 export default async function OfferDetailPage({ params }: PageProps) {
   const ctx = await requireAuth();
@@ -42,18 +42,32 @@ export default async function OfferDetailPage({ params }: PageProps) {
   if (!offer) notFound();
 
   const today = businessDate();
-  const [totals, series, activity, users, scripts, creatives, taxonomy] =
-    await Promise.all([
-      aggregateOfferTotals(offer.id),
-      listMetricsByOffer(offer.id, { from: shiftDate(today, -29), to: today }),
-      listActivityByOffer(offer.id),
-      listUsers(),
-      listScripts({ offerId: offer.id }),
-      listCreatives({ offerId: offer.id }),
-      getTaxonomy(),
-    ]);
+  const canSeeFinance = canRead(ctx.role, "expenses");
 
-  // Totais acumulados: o servidor somou, a aplicacao deriva (§33)
+  const [
+    totals,
+    series,
+    activity,
+    users,
+    scripts,
+    creatives,
+    taxonomy,
+    experiments,
+    allChips,
+    ledger,
+  ] = await Promise.all([
+    aggregateOfferTotals(offer.id),
+    listMetricsByOffer(offer.id, { from: shiftDate(today, -29), to: today }),
+    listActivityByOffer(offer.id),
+    listUsers(),
+    listScripts({ offerId: offer.id }),
+    listCreatives({ offerId: offer.id }),
+    getTaxonomy(),
+    listExperiments({ offerId: offer.id }),
+    listChips(),
+    canSeeFinance ? listLedger({ offerId: offer.id }) : Promise.resolve([]),
+  ]);
+
   const lifetime = derive({
     spend: totals.spend,
     impressions: totals.impressions,
@@ -67,6 +81,10 @@ export default async function OfferDetailPage({ params }: PageProps) {
   });
 
   const todayDerived = deriveFrom(series.filter((m) => m.date === today));
+  const chipsLinked = allChips.filter((c) => c.currentOfferId === offer.id);
+  const chipsAvailable = allChips.filter(
+    (c) => !c.currentOfferId && c.status !== "arquivado"
+  );
 
   return (
     <OfferDetail
@@ -102,6 +120,11 @@ export default async function OfferDetailPage({ params }: PageProps) {
         scriptVersion: c.scriptVersion,
       }))}
       taxonomy={taxonomy}
+      experiments={experiments}
+      chipsLinked={chipsLinked}
+      chipsAvailable={chipsAvailable}
+      ledger={ledger}
+      canSeeFinance={canSeeFinance}
     />
   );
 }

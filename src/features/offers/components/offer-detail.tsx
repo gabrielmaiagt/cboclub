@@ -18,9 +18,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreativeFormSheet } from "@/features/creatives/components/creative-form-sheet";
+import { OfferChipsTab } from "@/features/offers/components/offer-chips-tab";
+import { OfferFinanceTab } from "@/features/offers/components/offer-finance-tab";
 import { OfferFormSheet } from "@/features/offers/components/offer-form-sheet";
 import { OfferCharts } from "@/features/offers/components/offer-charts";
+import { OfferMetricsDialog } from "@/features/offers/components/offer-metrics-dialog";
 import { OfferStatusMenu } from "@/features/offers/components/offer-status-menu";
+import { OfferTestsTab } from "@/features/offers/components/offer-tests-tab";
 import { ScriptFormSheet } from "@/features/scripts/components/script-form-sheet";
 import type { UserOption } from "@/features/offers/types";
 import { canWrite } from "@/lib/auth/permissions";
@@ -48,7 +52,10 @@ import {
   OFFER_HEALTHS,
   type ActivityEntry,
   type AppRole,
+  type Chip,
   type CreativeStatus,
+  type Experiment,
+  type LedgerEntry,
   type Offer,
   type ScriptStatus,
   type Taxonomy,
@@ -91,6 +98,11 @@ interface OfferDetailProps {
   scripts: ScriptSummary[];
   creatives: CreativeSummary[];
   taxonomy: Taxonomy;
+  experiments: Experiment[];
+  chipsLinked: Chip[];
+  chipsAvailable: Chip[];
+  ledger: LedgerEntry[];
+  canSeeFinance: boolean;
 }
 
 function Stat({
@@ -133,6 +145,11 @@ export function OfferDetail({
   scripts,
   creatives,
   taxonomy,
+  experiments,
+  chipsLinked,
+  chipsAvailable,
+  ledger,
+  canSeeFinance,
 }: OfferDetailProps) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -498,21 +515,42 @@ export function OfferDetail({
           )}
         </TabsContent>
 
-        {/* ── Modulos futuros: presentes, honestos sobre quando chegam ── */}
         <TabsContent value="testes" className="mt-5">
-          <TabEmpty text="Os testes desta oferta aparecem aqui quando o módulo de Testes for construído (Fase 6)." />
+          <OfferTestsTab
+            offerId={offer.id}
+            offerCode={offer.code}
+            experiments={experiments}
+            users={users}
+            editable={canWrite(role, "traffic")}
+          />
         </TabsContent>
         <TabsContent value="chips" className="mt-5">
-          <TabEmpty text="Os chips vinculados a esta oferta aparecem aqui quando o módulo de Chips for construído (Fase 4)." />
+          <OfferChipsTab
+            offerId={offer.id}
+            chipsLinked={chipsLinked}
+            chipsAvailable={chipsAvailable}
+            editable={canWrite(role, "ops")}
+          />
         </TabsContent>
         <TabsContent value="financeiro" className="mt-5">
-          <TabEmpty text="Receitas e custos desta oferta aparecem aqui quando o módulo Financeiro for construído (Fase 7)." />
+          {canSeeFinance ? (
+            <OfferFinanceTab
+              offerId={offer.id}
+              ledger={ledger}
+              editable={canWrite(role, "finance")}
+            />
+          ) : (
+            <TabEmpty text="Você não tem permissão para ver o financeiro desta oferta." />
+          )}
         </TabsContent>
 
         {/* ── Trafego ─────────────────────────────────────────────── */}
-        <TabsContent value="trafego" className="mt-5">
+        <TabsContent value="trafego" className="mt-5 space-y-4">
+          {canWrite(role, "traffic") && (
+            <OfferMetricsDialog offerId={offer.id} offerCode={offer.code} />
+          )}
           {offer.campaigns.length === 0 ? (
-            <TabEmpty text="Nenhuma campanha cadastrada. O lançamento diário de métricas chega na Fase 7." />
+            <TabEmpty text="Nenhuma campanha cadastrada. Registre as métricas do dia acima." />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {offer.campaigns.map((campaign) => (

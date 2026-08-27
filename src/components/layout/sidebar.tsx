@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { NAV_SECTIONS } from "@/components/layout/nav-config";
+import { ADMIN_NAV_ITEMS, NAV_SECTIONS } from "@/components/layout/nav-config";
 import { canRead } from "@/lib/auth/permissions";
 import { cn } from "@/lib/utils";
 import type { AppRole } from "@/types/domain";
@@ -14,6 +14,10 @@ interface SidebarProps {
 
 export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
+
+  function isActive(href: string) {
+    return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  }
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border/60 bg-card/30 md:flex md:flex-col">
@@ -40,14 +44,9 @@ export function Sidebar({ role }: SidebarProps) {
               )}
               <ul className="space-y-1">
                 {visible.map((item) => {
-                  const active =
-                    item.href === "/"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.href);
+                  const active = isActive(item.href);
                   const Icon = item.icon;
 
-                  // So o que REALMENTE nao existe ainda parece
-                  // desabilitado — e diz o porque, em vez de so apagar
                   if (item.soon) {
                     return (
                       <li key={item.href}>
@@ -93,10 +92,30 @@ export function Sidebar({ role }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t border-border/60 px-4 py-3">
-        <p className="text-[11px] text-muted-foreground/60">
-          Ofertas · Criativos · Copies · Referências
-        </p>
+      {/* Administração: agrupado e discreto, fora da disputa principal (§5) */}
+      <div className="border-t border-border/60 px-3 py-3">
+        <ul className="space-y-0.5">
+          {ADMIN_NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            const Icon = item.icon;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-md px-3 py-1.5 text-xs transition-colors",
+                    active
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className="size-3.5 shrink-0" />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </aside>
   );

@@ -17,6 +17,7 @@ export const COL = {
   miningItems: "miningItems",
   partners: "partners",
   ledger: "ledger",
+  recurringCosts: "recurringCosts",
   decisions: "decisions",
   tasks: "tasks",
   sops: "sops",

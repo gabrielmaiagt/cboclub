@@ -20,8 +20,15 @@ export interface TodaySnapshot {
  * dela. O join com usuarios e metricas acontece no server component, de
  * modo que o componente cliente recebe tudo pronto.
  */
+export interface OfferCounts {
+  creatives: number;
+  copies: number;
+  chips: number;
+}
+
 export interface OfferRow {
   offer: Offer;
   responsibleName: string | null;
   today: TodaySnapshot;
+  counts: OfferCounts;
 }

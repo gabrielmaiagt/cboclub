@@ -148,3 +148,64 @@ export function groupByOffer(
   }
   return map;
 }
+
+// ── Escrita ─────────────────────────────────────────────────────────
+
+import { appendActivity } from "@/services/firestore/activity.repo";
+import { auditOnCreate, auditOnUpdate, stripUndefined } from "@/services/firestore/converters";
+import type { Actor } from "@/services/firestore/offers.repo";
+import type { DailyMetricFormOutput } from "@/lib/schemas/metrics";
+
+/**
+ * Upsert idempotente (§28): mesmo dia + mesma oferta sempre escreve no
+ * mesmo documento (id = `${date}_${offerId}`). Registrar duas vezes o
+ * mesmo dia corrige o lancamento em vez de duplicar.
+ */
+export async function upsertDailyMetric(
+  input: DailyMetricFormOutput,
+  actor: Actor
+): Promise<void> {
+  const db = adminDb();
+  const id = metricDocId(input.date, input.offerId);
+  const ref = db.collection(COL.dailyMetrics).doc(id);
+  const snap = await ref.get();
+  const isNew = !snap.exists;
+
+  const batch = db.batch();
+  batch.set(
+    ref,
+    stripUndefined({
+      date: input.date,
+      offerId: input.offerId,
+      spend: input.spend,
+      impressions: input.impressions,
+      clicks: input.clicks,
+      leads: input.leads,
+      sales: input.sales,
+      revenue: input.revenue,
+      refunds: input.refunds,
+      gatewayFees: input.gatewayFees,
+      additionalCosts: input.additionalCosts,
+      notes: input.notes,
+      ...(isNew ? auditOnCreate(actor.uid) : auditOnUpdate(actor.uid)),
+    }),
+    { merge: true }
+  );
+
+  appendActivity(
+    batch,
+    {
+      actorId: actor.uid,
+      actorName: actor.name,
+      entityType: "dailyMetric",
+      entityId: id,
+      entityCode: null,
+      offerId: input.offerId,
+      action: isNew ? "created" : "updated",
+      description: `${actor.name ?? "Alguém"} registrou métricas de ${input.date}: R$ ${input.spend.toFixed(2)} gasto, R$ ${input.revenue.toFixed(2)} receita`,
+    },
+    db
+  );
+
+  await batch.commit();
+}

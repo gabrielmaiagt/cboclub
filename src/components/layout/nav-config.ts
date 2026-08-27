@@ -1,17 +1,13 @@
 import {
-  BookMarked,
   Boxes,
   ClipboardList,
   Coins,
-  FlaskConical,
   LayoutDashboard,
   ListChecks,
   Package,
-  PenLine,
   Pickaxe,
   Settings,
   Smartphone,
-  TrendingUp,
   Users,
   Wrench,
   type LucideIcon,
@@ -35,49 +31,34 @@ export interface NavSection {
 }
 
 /**
- * Sidebar (§4). A ordem segue o fluxo operacional:
- * o que esta acontecendo -> a producao -> os recursos -> a gestao.
+ * Sidebar principal (§5): 7 itens, sem competir por atencao.
+ * Produção reune Copies + Criativos numa unica area (§13).
+ * Mineração reune Ofertas Mineradas + Criativos de Referência (§17).
  */
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: null,
     items: [
-      { href: "/", label: "Visão Geral", icon: LayoutDashboard, soon: true },
-    ],
-  },
-  {
-    label: "Produção",
-    items: [
+      { href: "/", label: "Visão Geral", icon: LayoutDashboard },
       { href: "/ofertas", label: "Ofertas", icon: Package },
-      { href: "/mineracao", label: "Mineração", icon: Pickaxe, soon: true },
-      { href: "/criativos", label: "Criativos", icon: Boxes },
-      { href: "/copies", label: "Copies", icon: PenLine },
-      { href: "/referencias", label: "Referências", icon: BookMarked },
-      { href: "/testes", label: "Testes", icon: FlaskConical, soon: true },
-    ],
-  },
-  {
-    label: "Operação",
-    items: [
-      { href: "/chips", label: "Chips", icon: Smartphone, soon: true },
-      { href: "/trafego", label: "Tráfego", icon: TrendingUp, soon: true },
+      { href: "/producao", label: "Produção", icon: Boxes },
+      { href: "/mineracao", label: "Mineração", icon: Pickaxe },
+      { href: "/chips", label: "Chips", icon: Smartphone },
       {
         href: "/financeiro",
         label: "Financeiro",
         icon: Coins,
         readGroup: "expenses",
-        soon: true,
       },
+      { href: "/tarefas", label: "Tarefas", icon: ListChecks },
     ],
   },
-  {
-    label: "Gestão",
-    items: [
-      { href: "/tarefas", label: "Tarefas", icon: ListChecks, soon: true },
-      { href: "/sops", label: "SOPs", icon: ClipboardList, soon: true },
-      { href: "/ferramentas", label: "Ferramentas", icon: Wrench, soon: true },
-      { href: "/usuarios", label: "Usuários", icon: Users, soon: true },
-      { href: "/configuracoes", label: "Configurações", icon: Settings, soon: true },
-    ],
-  },
+];
+
+/** Administração / secundário (§5) — agrupado, fora da disputa principal. */
+export const ADMIN_NAV_ITEMS: NavItem[] = [
+  { href: "/equipe", label: "Equipe", icon: Users },
+  { href: "/ferramentas", label: "Ferramentas", icon: Wrench },
+  { href: "/processos", label: "Processos", icon: ClipboardList },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];

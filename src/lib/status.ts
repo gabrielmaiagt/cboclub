@@ -5,7 +5,11 @@
  * dashboard e no card. Centralizar aqui e o que garante isso.
  */
 import type {
+  ChipStatus,
   CreativeStatus,
+  DecisionStatus,
+  ExperimentResult,
+  ExperimentStatus,
   MiningStatus,
   OfferHealth,
   OfferStatus,
@@ -227,23 +231,21 @@ export const REFERENCE_STATUS_LABELS: Record<ReferenceStatus, string> = {
 };
 
 export const MINING_STATUS_TONE: Record<MiningStatus, StatusTone> = {
-  encontrada: "neutral",
+  salva: "neutral",
   analisar: "progress",
-  interessante: "progress",
-  aprovada: "ready",
-  modelar: "ready",
+  quero_modelar: "warn",
+  modelando: "progress",
+  modelada: "win",
   descartada: "dead",
-  convertida: "win",
 };
 
 export const MINING_STATUS_LABELS: Record<MiningStatus, string> = {
-  encontrada: "Encontrada",
+  salva: "Salva",
   analisar: "Analisar",
-  interessante: "Interessante",
-  aprovada: "Aprovada",
-  modelar: "Modelar",
+  quero_modelar: "Quero modelar",
+  modelando: "Modelando",
+  modelada: "Modelada",
   descartada: "Descartada",
-  convertida: "Convertida",
 };
 
 export const TASK_STATUS_TONE: Record<TaskStatus, StatusTone> = {
@@ -293,3 +295,101 @@ export const OFFER_KANBAN_COLUMNS: OfferStatus[] = [
   "pausada",
   "morta",
 ];
+
+// ── Testes ────────────────────────────────────────────────────────────
+export const EXPERIMENT_STATUS_TONE: Record<ExperimentStatus, StatusTone> = {
+  planejado: "neutral",
+  rodando: "live",
+  pausado: "warn",
+  concluido: "win",
+  cancelado: "dead",
+};
+
+export const EXPERIMENT_STATUS_LABELS: Record<ExperimentStatus, string> = {
+  planejado: "Planejado",
+  rodando: "Em andamento",
+  pausado: "Pausado",
+  concluido: "Concluído",
+  cancelado: "Cancelado",
+};
+
+export const EXPERIMENT_RESULT_TONE: Record<ExperimentResult, StatusTone> = {
+  vencedor: "win",
+  perdedor: "danger",
+  neutro: "neutral",
+  inconclusivo: "warn",
+};
+
+export const EXPERIMENT_RESULT_LABELS: Record<ExperimentResult, string> = {
+  vencedor: "Vencedor",
+  perdedor: "Perdedor",
+  neutro: "Neutro",
+  inconclusivo: "Inconclusivo",
+};
+
+export const EXPERIMENT_VARIABLE_LABELS: Record<string, string> = {
+  oferta: "Oferta",
+  promessa: "Promessa",
+  preco: "Preço",
+  pagina: "Página",
+  headline: "Headline",
+  angulo: "Ângulo",
+  hook: "Hook",
+  copy: "Copy",
+  criativo: "Criativo",
+  cta: "CTA",
+  publico: "Público",
+  campanha: "Campanha",
+  upsell: "Upsell",
+};
+
+// ── Chips ────────────────────────────────────────────────────────────
+export const CHIP_STATUS_TONE: Record<ChipStatus, StatusTone> = {
+  novo: "neutral",
+  aquecendo: "progress",
+  pronto: "ready",
+  ativo: "live",
+  reserva: "warn",
+  indisponivel: "danger",
+  arquivado: "dead",
+};
+
+export const CHIP_STATUS_LABELS: Record<ChipStatus, string> = {
+  novo: "Novo",
+  aquecendo: "Aquecendo",
+  pronto: "Pronto",
+  ativo: "Ativo",
+  reserva: "Reserva",
+  indisponivel: "Indisponível",
+  arquivado: "Arquivado",
+};
+
+// ── Decisoes ─────────────────────────────────────────────────────────
+export const DECISION_STATUS_TONE: Record<DecisionStatus, StatusTone> = {
+  aberta: "warn",
+  em_andamento: "progress",
+  resolvida: "win",
+  descartada: "dead",
+};
+
+export const DECISION_STATUS_LABELS: Record<DecisionStatus, string> = {
+  aberta: "Aberta",
+  em_andamento: "Em andamento",
+  resolvida: "Resolvida",
+  descartada: "Descartada",
+};
+
+/** Categoria de despesa em texto legivel. */
+export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
+  meta_ads: "Tráfego (Meta Ads)",
+  funcionarios: "Funcionários",
+  freelancer: "Freelancer",
+  chips: "Chips",
+  ferramentas: "Ferramentas",
+  dominios: "Domínios",
+  hospedagem: "Hospedagem",
+  gateway: "Gateway",
+  criativos: "Criativos",
+  infraestrutura: "Infraestrutura",
+  outros: "Outros",
+};

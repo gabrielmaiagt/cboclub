@@ -179,13 +179,12 @@ export const CHIP_EVENT_TYPES = [
 export type ChipEventType = (typeof CHIP_EVENT_TYPES)[number];
 
 export const MINING_STATUSES = [
-  "encontrada",
+  "salva",
   "analisar",
-  "interessante",
-  "aprovada",
-  "modelar",
+  "quero_modelar",
+  "modelando",
+  "modelada",
   "descartada",
-  "convertida",
 ] as const;
 export type MiningStatus = (typeof MINING_STATUSES)[number];
 
@@ -535,7 +534,7 @@ export interface CreativeReference extends AuditFields {
   notes: string | null;
 }
 
-/** Oferta minerada — banco de ofertas de terceiros (§13). */
+/** Oferta minerada — banco de ofertas de terceiros (§13, §18). */
 export interface MiningItem extends AuditFields {
   id: string;
   code: string; // MIN-0001
@@ -544,10 +543,14 @@ export interface MiningItem extends AuditFields {
   whyInteresting: string | null;
   status: MiningStatus;
   niche: string | null;
+  country: string | null;
+  targetAudience: string | null;
   promise: string | null;
   mechanism: string | null;
   price: number | null;
   advertiser: string | null;
+  /** Score geral 1-5, opcional — nunca obrigatorio para salvar. */
+  score: number | null;
   notes: string | null;
   convertedOfferId: string | null;
 }
@@ -607,3 +610,160 @@ export type OfferCreateInput = Omit<
 export type OfferUpdateInput = Partial<
   Omit<Offer, keyof AuditFields | "id" | "code">
 >;
+
+// ── Testes (§23-§25) ─────────────────────────────────────────────────
+/**
+ * Teste. Vive dentro de uma oferta. §24: nao pode ser concluido sem
+ * result + conclusion + nextAction — protegido por Zod, guard e rules.
+ */
+export interface Experiment extends AuditFields {
+  id: string;
+  code: string; // TEST-0001
+  offerId: string;
+  name: string;
+  hypothesis: string;
+  variable: ExperimentVariable;
+  status: ExperimentStatus;
+  responsibleId: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  spend: number;
+  leads: number;
+  sales: number;
+  revenue: number;
+  result: ExperimentResult | null;
+  conclusion: string | null;
+  nextAction: string | null;
+}
+
+// ── Chips (§39-§44) ──────────────────────────────────────────────────
+export interface Chip extends AuditFields {
+  id: string;
+  code: string; // CHIP-001
+  /** Numero mascarado, ex: ****4321. Numero real vive em secret/phone. */
+  maskedNumber: string | null;
+  operator: string | null;
+  status: ChipStatus;
+  responsibleId: string | null;
+  currentOfferId: string | null;
+  notes: string | null;
+  acquisitionDate: string | null;
+  warmupStartDate: string | null;
+  readyDate: string | null;
+  activationDate: string | null;
+}
+
+export interface ChipEvent {
+  id: string;
+  chipId: string;
+  type: ChipEventType;
+  description: string;
+  offerId: string | null;
+  actorId: string | null;
+  actorName: string | null;
+  createdAt: string;
+}
+
+// ── Financeiro (§30-§38) ─────────────────────────────────────────────
+export interface Partner {
+  id: string;
+  name: string;
+  ownershipPercentage: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Ledger unificado: expense | revenue | contribution | distribution.
+ * Uma collection, quatro naturezas — evita 1:1 com 4 tabelas (§31).
+ */
+export interface LedgerEntry {
+  id: string;
+  kind: LedgerKind;
+  amount: number;
+  date: string;
+  description: string | null;
+  notes: string | null;
+  // expense
+  category: ExpenseCategory | null;
+  offerId: string | null;
+  recurring: boolean;
+  receiptPath: string | null;
+  /** false para meta_ads/gateway — ja contabilizados via dailyMetrics. */
+  countsInPnl: boolean;
+  // revenue
+  source: RevenueSource | null;
+  // contribution / distribution
+  partnerId: string | null;
+  period: string | null;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export interface RecurringCost {
+  id: string;
+  name: string;
+  category: ToolCategory;
+  amount: number;
+  frequency: "mensal" | "anual";
+  nextChargeDate: string | null;
+  responsibleId: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Gestao (§45-§51) ─────────────────────────────────────────────────
+export interface Task extends AuditFields {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: Priority;
+  responsibleId: string | null;
+  deadline: string | null;
+  offerId: string | null;
+  creativeId: string | null;
+  decisionId: string | null;
+  completedAt: string | null;
+}
+
+export interface Decision {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: Priority;
+  type: DecisionType;
+  status: DecisionStatus;
+  responsibleId: string | null;
+  offerId: string | null;
+  resolution: string | null;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+}
+
+export interface Tool {
+  id: string;
+  name: string;
+  category: ToolCategory;
+  url: string | null;
+  monthlyCost: number;
+  renewalDate: string | null;
+  responsibleId: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** "Processos" na interface — nunca "SOPs" (§51). */
+export interface ProcessDoc {
+  id: string;
+  title: string;
+  category: SopCategory;
+  content: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

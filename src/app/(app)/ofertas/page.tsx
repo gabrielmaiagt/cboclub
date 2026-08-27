@@ -2,6 +2,9 @@ import { requireAuth } from "@/lib/auth/guard";
 import { businessDate } from "@/lib/format";
 import { OffersView } from "@/features/offers/components/offers-view";
 import { listOffers } from "@/services/firestore/offers.repo";
+import { listChips } from "@/services/firestore/chips.repo";
+import { listCreatives } from "@/services/firestore/creatives.repo";
+import { listScripts } from "@/services/firestore/scripts.repo";
 import {
   groupByOffer,
   listMetricsByDate,
@@ -13,29 +16,41 @@ import type { OfferRow } from "@/features/offers/types";
 export const metadata = { title: "Ofertas" };
 export const dynamic = "force-dynamic";
 
+function countBy<T>(items: T[], key: (item: T) => string | null): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    const k = key(item);
+    if (!k) continue;
+    map.set(k, (map.get(k) ?? 0) + 1);
+  }
+  return map;
+}
+
 /**
- * Lista de ofertas.
+ * Lista de ofertas (§8): cards horizontais por padrão.
  *
- * Server component: le direto do repositorio, sem passar por server
- * action. O guard roda aqui tambem — o layout ja checou, mas cada rota
- * que le dado valida por conta propria.
- *
- * Custo: 1 query de ofertas (dezenas) + 1 query das metricas de hoje
- * (uma por oferta ativa) + 1 de usuarios. O join e feito em memoria,
- * que e mais barato do que denormalizar nome de oferta em cada metrica.
+ * Custo: ofertas + metricas de hoje + usuarios + criativos/copies/chips
+ * (para as contagens do card) — tudo pequeno, uma query cada, sem N+1.
  */
 export default async function OffersPage() {
   const ctx = await requireAuth();
 
   const today = businessDate();
-  const [offers, todayMetrics, users] = await Promise.all([
-    listOffers(),
-    listMetricsByDate(today),
-    listUsers(),
-  ]);
+  const [offers, todayMetrics, users, creatives, scripts, chips] =
+    await Promise.all([
+      listOffers(),
+      listMetricsByDate(today),
+      listUsers(),
+      listCreatives(),
+      listScripts(),
+      listChips(),
+    ]);
 
   const metricsByOffer = groupByOffer(todayMetrics);
   const userNames = new Map(users.map((u) => [u.id, u.fullName]));
+  const creativeCounts = countBy(creatives, (c) => c.offerId);
+  const scriptCounts = countBy(scripts, (s) => s.offerId);
+  const chipCounts = countBy(chips, (c) => c.currentOfferId);
 
   const rows: OfferRow[] = offers.map((offer) => {
     const todays = metricsByOffer.get(offer.id) ?? [];
@@ -51,6 +66,11 @@ export default async function OffersPage() {
         roas: derived.roas,
         profit: derived.operationalProfit,
         sales: derived.sales,
+      },
+      counts: {
+        creatives: creativeCounts.get(offer.id) ?? 0,
+        copies: scriptCounts.get(offer.id) ?? 0,
+        chips: chipCounts.get(offer.id) ?? 0,
       },
     };
   });
