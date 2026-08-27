@@ -9,6 +9,7 @@ import {
   auditOnUpdate,
   readAudit,
   stripUndefined,
+  tsToIso,
 } from "@/services/firestore/converters";
 import type { Actor } from "@/services/firestore/offers.repo";
 import type { TaskFormOutput, TaskUpdateValues } from "@/lib/schemas/management";
@@ -29,7 +30,7 @@ function toTask(doc: FirebaseFirestore.DocumentSnapshot): Task {
     offerId: d.offerId ?? null,
     creativeId: d.creativeId ?? null,
     decisionId: d.decisionId ?? null,
-    completedAt: d.completedAt ?? null,
+    completedAt: tsToIso(d.completedAt),
     ...readAudit(d),
   };
 }

@@ -51,3 +51,72 @@ export async function getTaxonomy(): Promise<Taxonomy> {
     angleLibrary: d.angleLibrary ?? [],
   };
 }
+
+// ── Escrita (§52) ───────────────────────────────────────────────────
+
+import { FieldValue } from "firebase-admin/firestore";
+
+export async function updateAppSettings(
+  patch: Partial<AppSettings>,
+  actorUid: string
+): Promise<void> {
+  await adminDb()
+    .collection(COL.settings)
+    .doc(DOC.settingsApp)
+    .set({ ...patch, updatedAt: FieldValue.serverTimestamp(), updatedBy: actorUid }, { merge: true });
+}
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export async function addCreativeFormat(name: string, actorUid: string): Promise<void> {
+  const taxonomy = await getTaxonomy();
+  const slug = slugify(name);
+  if (taxonomy.creativeFormats.some((f) => f.slug === slug)) return;
+  const next = [
+    ...taxonomy.creativeFormats,
+    { slug, name, active: true, sortOrder: (taxonomy.creativeFormats.length + 1) * 10 },
+  ];
+  await adminDb()
+    .collection(COL.settings)
+    .doc(DOC.settingsTaxonomy)
+    .set(
+      { creativeFormats: next, updatedAt: FieldValue.serverTimestamp(), updatedBy: actorUid },
+      { merge: true }
+    );
+}
+
+export async function addTag(name: string, color: string, actorUid: string): Promise<void> {
+  const taxonomy = await getTaxonomy();
+  const slug = slugify(name);
+  if (taxonomy.tags.some((t) => t.slug === slug)) return;
+  const next = [...taxonomy.tags, { slug, name, color }];
+  await adminDb()
+    .collection(COL.settings)
+    .doc(DOC.settingsTaxonomy)
+    .set({ tags: next, updatedAt: FieldValue.serverTimestamp(), updatedBy: actorUid }, { merge: true });
+}
+
+export async function addLibraryAngle(
+  name: string,
+  description: string | null,
+  actorUid: string
+): Promise<void> {
+  const taxonomy = await getTaxonomy();
+  const slug = slugify(name);
+  if (taxonomy.angleLibrary.some((a) => a.slug === slug)) return;
+  const next = [...taxonomy.angleLibrary, { slug, name, description }];
+  await adminDb()
+    .collection(COL.settings)
+    .doc(DOC.settingsTaxonomy)
+    .set(
+      { angleLibrary: next, updatedAt: FieldValue.serverTimestamp(), updatedBy: actorUid },
+      { merge: true }
+    );
+}
