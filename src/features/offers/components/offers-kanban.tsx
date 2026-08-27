@@ -237,7 +237,7 @@ export function OffersKanban({ rows, editable }: OffersKanbanProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="thin-scroll flex gap-3 overflow-x-auto pb-4">
+      <div className="flex flex-wrap gap-3 pb-4">
         {OFFER_KANBAN_COLUMNS.map((status) => (
           <Column
             key={status}
