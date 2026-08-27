@@ -211,91 +211,23 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "spend",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dailyMetrics",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "offerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "revenue",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dailyMetrics",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "offerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "refunds",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dailyMetrics",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "offerId",
+          "fieldPath": "additionalCosts",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "gatewayFees",
           "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dailyMetrics",
-      "queryScope": "COLLECTION",
-      "fields": [
+        },
         {
-          "fieldPath": "offerId",
+          "fieldPath": "refunds",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "additionalCosts",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dailyMetrics",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "offerId",
+          "fieldPath": "revenue",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "sales",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dailyMetrics",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "offerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "leads",
+          "fieldPath": "spend",
           "order": "ASCENDING"
         }
       ]
@@ -311,6 +243,18 @@
         {
           "fieldPath": "clicks",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "impressions",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "leads",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sales",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -319,11 +263,19 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "offerId",
+          "fieldPath": "gatewayFees",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "impressions",
+          "fieldPath": "refunds",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "revenue",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "spend",
           "order": "ASCENDING"
         }
       ]
