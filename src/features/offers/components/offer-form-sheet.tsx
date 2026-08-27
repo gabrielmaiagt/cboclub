@@ -123,6 +123,7 @@ export function OfferFormSheet({
   // Recarrega o formulario sempre que o sheet abre
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset do formulario ao abrir, nao um loop
     setForm(offer ? fromOffer(offer) : emptyState());
     setErrors({});
     setShowMore(mode === "edit");

@@ -75,7 +75,6 @@ export function adminAuth(): Auth {
 // locais, mas a instancia do Firestore sobrevive no app singleton — e
 // settings() so pode ser chamado uma vez por instancia.
 declare global {
-  // eslint-disable-next-line no-var
   var __adminFirestore: Firestore | undefined;
 }
 

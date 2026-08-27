@@ -46,6 +46,7 @@ export function MiningDetailsDialog({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset do formulario ao abrir, nao um loop
     setForm({
       niche: item.niche ?? "",
       country: item.country ?? "",

@@ -48,6 +48,7 @@ export function GlobalSearch() {
 
   useEffect(() => {
     if (query.trim().length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset do formulario ao abrir, nao um loop
       setResults([]);
       return;
     }

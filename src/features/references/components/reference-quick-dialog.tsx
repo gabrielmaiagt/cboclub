@@ -63,6 +63,7 @@ export function ReferenceQuickDialog({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset do formulario ao abrir, nao um loop
     setForm({ url: "", whySaved: "", transcription: "", miningItemId: NONE });
     setShowMore(false);
     setError(null);

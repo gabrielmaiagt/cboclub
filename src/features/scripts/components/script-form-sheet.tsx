@@ -84,6 +84,7 @@ export function ScriptFormSheet({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset do formulario ao abrir, nao um loop
     setForm({ ...empty, offerId: lockedOfferId ?? "" });
     setErrors({});
     setShowMore(false);

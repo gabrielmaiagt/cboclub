@@ -7,8 +7,6 @@ import { COL } from "@/lib/firebase/collections";
 import { appendActivity } from "@/services/firestore/activity.repo";
 import {
   auditOnCreate,
-  auditOnUpdate,
-  readAudit,
   stripUndefined,
   tsToIso,
 } from "@/services/firestore/converters";

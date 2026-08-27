@@ -120,9 +120,13 @@ async function main() {
   const copiesPage = await get("/copies", cookie);
   const copiesHtml = await copiesPage.text();
   check("GET /copies responde 200", copiesPage.status === 200);
+  // React SSR insere <!-- --> entre texto estatico e expressao adjacentes
+  // (ex: "V"+{2}) para marcar limites de hidratacao — o texto visivel
+  // real ("V2") e identico, entao removemos comentarios antes de comparar.
+  const copiesHtmlNoComments = copiesHtml.replace(/<!--.*?-->/g, "");
   check(
     "listagem de copies mostra código, versão e duração",
-    copiesHtml.includes("CP-0001") && copiesHtml.includes("V2")
+    copiesHtmlNoComments.includes("CP-0001") && copiesHtmlNoComments.includes("V2")
   );
 
   const creativeDetail = await get("/criativos/CR-0001", cookie);

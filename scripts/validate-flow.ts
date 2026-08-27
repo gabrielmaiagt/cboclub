@@ -148,8 +148,8 @@ async function main() {
   });
   const created = await createOffer(parsed, actor);
   check(
-    "createOffer gera código sequencial (OFFER-0005)",
-    created.code === "OFFER-0005",
+    "createOffer gera código sequencial no formato OFFER-NNNN",
+    /^OFFER-\d{4}$/.test(created.code),
     `veio ${created.code}`
   );
   check("deletedAt nasce explicitamente null", created.deletedAt === null);

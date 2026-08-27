@@ -153,6 +153,7 @@ export function CreativeFormSheet({
     if (!open) return;
     const base = creative ? fromCreative(creative) : emptyState();
     if (!creative && lockedOfferId) base.offerId = lockedOfferId;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset do formulario ao abrir, nao um loop
     setForm(base);
     setErrors({});
     setShowMore(mode === "edit");

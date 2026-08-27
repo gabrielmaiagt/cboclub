@@ -1,13 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { LogOut, Plus } from "lucide-react";
+import { useTransition } from "react";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 import { destroySession } from "@/app/actions/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { GlobalSearch } from "@/features/search/components/global-search";
+import { QuickAdd } from "@/features/search/components/quick-add";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { ROLE_LABELS, type User } from "@/types/domain";
 
@@ -58,24 +59,15 @@ export function Topbar({ user, quickAdd }: TopbarProps) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 px-4">
+      <MobileNav role={user.role} />
+
       {/* Busca global (§53) */}
       <div className="max-w-md flex-1">
         <GlobalSearch />
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        {quickAdd ?? (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled
-            title="O atalho global de criação chega com os próximos módulos"
-            className="gap-1.5"
-          >
-            <Plus className="size-4" />
-            Adicionar
-          </Button>
-        )}
+        {quickAdd ?? <QuickAdd />}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

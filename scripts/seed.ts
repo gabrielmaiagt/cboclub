@@ -1265,7 +1265,7 @@ function maskPhone(phone: string): string {
 }
 
 async function seedChips() {
-  let batch = db.batch();
+  const batch = db.batch();
   for (const c of CHIPS) {
     const ref = db.collection("chips").doc(c.id);
     batch.set(ref, {
