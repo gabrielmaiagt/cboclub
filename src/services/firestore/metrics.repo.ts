@@ -209,3 +209,33 @@ export async function upsertDailyMetric(
 
   await batch.commit();
 }
+
+/**
+ * Totais da empresa inteira num periodo, via aggregation query.
+ * Usado no Financeiro para "investimento em trafego" e "receita de ofertas".
+ */
+export async function aggregateCompanyMetrics(
+  from?: string,
+  to?: string
+): Promise<{ spend: number; revenue: number; refunds: number; gatewayFees: number }> {
+  const { AggregateField } = await import("firebase-admin/firestore");
+  let q: FirebaseFirestore.Query = adminDb().collection(COL.dailyMetrics);
+  if (from) q = q.where("date", ">=", from);
+  if (to) q = q.where("date", "<=", to);
+
+  const agg = await q
+    .aggregate({
+      spend: AggregateField.sum("spend"),
+      revenue: AggregateField.sum("revenue"),
+      refunds: AggregateField.sum("refunds"),
+      gatewayFees: AggregateField.sum("gatewayFees"),
+    })
+    .get();
+  const d = agg.data();
+  return {
+    spend: d.spend ?? 0,
+    revenue: d.revenue ?? 0,
+    refunds: d.refunds ?? 0,
+    gatewayFees: d.gatewayFees ?? 0,
+  };
+}

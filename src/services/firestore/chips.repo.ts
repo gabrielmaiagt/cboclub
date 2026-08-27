@@ -60,6 +60,17 @@ export async function getChipById(id: string): Promise<Chip | null> {
   return chip.deletedAt ? null : chip;
 }
 
+export async function getChipByCode(code: string): Promise<Chip | null> {
+  const snap = await adminDb()
+    .collection(COL.chips)
+    .where("code", "==", code.toUpperCase())
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const chip = toChip(snap.docs[0]);
+  return chip.deletedAt ? null : chip;
+}
+
 export async function listChips(
   options: { offerId?: string; status?: ChipStatus; limit?: number } = {}
 ): Promise<Chip[]> {
