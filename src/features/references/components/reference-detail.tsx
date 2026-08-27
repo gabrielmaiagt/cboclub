@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { VideoUploadField } from "@/components/shared/storage-video";
 import type { MiningOption } from "@/features/references/types";
 import { canWrite } from "@/lib/auth/permissions";
 import { dateTime, EMPTY } from "@/lib/format";
@@ -111,6 +112,17 @@ export function ReferenceDetail({
         return;
       }
       toast.success(`${reference.code} → ${REFERENCE_STATUS_LABELS[status]}`);
+      router.refresh();
+    });
+  }
+
+  function handleVideoChange(storagePath: string | null) {
+    startTransition(async () => {
+      const result = await updateReferenceAction(reference.id, { storagePath });
+      if (!result.ok) {
+        toast.error(result.error ?? "Não foi possível salvar o vídeo.");
+        return;
+      }
       router.refresh();
     });
   }
@@ -223,25 +235,39 @@ export function ReferenceDetail({
         <div className="space-y-4 lg:col-span-2">
           {/* ── Material original (§11) ──────────────────────────── */}
           <Section title="Material original">
-            {reference.url ? (
-              <a
-                href={reference.url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ExternalLink className="size-3.5" />
-                <span className="truncate underline decoration-border">
-                  {reference.url}
-                </span>
-              </a>
-            ) : reference.storagePath ? (
-              <p className="font-mono text-xs text-muted-foreground">
-                {reference.storagePath}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground/50">{EMPTY}</p>
-            )}
+            <div className="space-y-3">
+              {reference.url ? (
+                <a
+                  href={reference.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="size-3.5" />
+                  <span className="truncate underline decoration-border">
+                    {reference.url}
+                  </span>
+                </a>
+              ) : !reference.storagePath ? (
+                <p className="text-sm text-muted-foreground/50">{EMPTY}</p>
+              ) : null}
+
+              {editable ? (
+                <VideoUploadField
+                  path={reference.storagePath}
+                  pathPrefix="references"
+                  onChange={handleVideoChange}
+                  disabled={pending}
+                  label="Anexar vídeo"
+                />
+              ) : (
+                reference.storagePath && (
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {reference.storagePath}
+                  </p>
+                )
+              )}
+            </div>
           </Section>
 
           {/* ── Transcricao original — NUNCA sobrescrita (§11) ───── */}

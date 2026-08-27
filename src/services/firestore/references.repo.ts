@@ -257,6 +257,9 @@ export async function createModelagem(
       suggestedFormat: reference.format,
       editingInstructions: null,
       referenceLinks: reference.url,
+      // O video do anuncio minerado vira o video de referencia da copy:
+      // o editor assiste o mesmo material sem precisar subir de novo.
+      referenceVideoPath: reference.storagePath,
       deadline: null,
       sourceReferenceId: reference.id,
       hook: null,

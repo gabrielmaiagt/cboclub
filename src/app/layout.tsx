@@ -30,10 +30,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    // Dark mode fixo: ferramenta operacional usada o dia inteiro
-    <html lang="pt-BR" className="dark">
+    // Dark mode fixo: ferramenta operacional usada o dia inteiro.
+    // suppressHydrationWarning: algumas extensoes de navegador injetam
+    // atributos no <html> (ex: data-umb-interceptor-ready) antes do React
+    // hidratar. Isso nao vem do nosso codigo e nao ha como evitar — e o
+    // fix oficialmente recomendado pelo React para esse cenario especifico.
+    <html lang="pt-BR" className="dark" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-background font-sans text-foreground antialiased`}
+        suppressHydrationWarning
       >
         <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
         <Toaster position="top-right" richColors closeButton />

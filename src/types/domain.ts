@@ -591,6 +591,8 @@ export interface Script extends AuditFields {
   editingInstructions: string | null;
   /** Links de referencia, um por linha. */
   referenceLinks: string | null;
+  /** Video de referencia anexado (Storage): o que o editor deve assistir. */
+  referenceVideoPath: string | null;
   /** Prazo de producao (YYYY-MM-DD). */
   deadline: string | null;
   /** Referencia externa que originou esta copy (modelagem, §12). */

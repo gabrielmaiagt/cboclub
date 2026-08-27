@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { VideoUploadField } from "@/components/shared/storage-video";
 import type { UserOption } from "@/features/scripts/types";
 import { canWrite } from "@/lib/auth/permissions";
 import { dateTime, duration, EMPTY } from "@/lib/format";
@@ -122,6 +123,17 @@ export function ScriptDetail({
     });
   }
 
+  function handleVideoChange(referenceVideoPath: string | null) {
+    startTransition(async () => {
+      const result = await updateScriptMetaAction(script.id, { referenceVideoPath });
+      if (!result.ok) {
+        toast.error(result.error ?? "Não foi possível salvar o vídeo.");
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   function handleStatusChange(status: ScriptStatus) {
     if (status === script.status) return;
     startTransition(async () => {
@@ -211,7 +223,9 @@ export function ScriptDetail({
       {(script.editingInstructions ||
         script.suggestedFormat ||
         script.deadline ||
-        script.referenceLinks) && (
+        script.referenceLinks ||
+        script.referenceVideoPath ||
+        editable) && (
         <div className="rounded-lg border border-status-warn/30 bg-status-warn/5 p-4">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-status-warn">
             Briefing de produção
@@ -245,6 +259,28 @@ export function ScriptDetail({
                     {link.trim()}
                   </a>
                 ))}
+              </div>
+            )}
+
+            {(script.referenceVideoPath || editable) && (
+              <div className="pt-1">
+                <p className="mb-1.5 text-xs text-muted-foreground">
+                  Vídeo de referência:
+                </p>
+                {editable ? (
+                  <VideoUploadField
+                    path={script.referenceVideoPath}
+                    pathPrefix={`scripts/${script.offerId}`}
+                    onChange={handleVideoChange}
+                    disabled={pending}
+                  />
+                ) : (
+                  script.referenceVideoPath && (
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {script.referenceVideoPath}
+                    </p>
+                  )
+                )}
               </div>
             )}
           </div>

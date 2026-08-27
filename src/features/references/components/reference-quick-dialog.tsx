@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { MiningOption } from "@/features/references/types";
+import { VideoUploadField } from "@/components/shared/storage-video";
 import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
@@ -59,12 +60,19 @@ export function ReferenceQuickDialog({
     whySaved: "",
     transcription: "",
     miningItemId: NONE,
+    storagePath: null as string | null,
   });
 
   useEffect(() => {
     if (!open) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset do formulario ao abrir, nao um loop
-    setForm({ url: "", whySaved: "", transcription: "", miningItemId: NONE });
+    setForm({
+      url: "",
+      whySaved: "",
+      transcription: "",
+      miningItemId: NONE,
+      storagePath: null,
+    });
     setShowMore(false);
     setError(null);
   }, [open]);
@@ -76,6 +84,7 @@ export function ReferenceQuickDialog({
     startTransition(async () => {
       const result = await createReferenceAction({
         url: form.url.trim(),
+        storagePath: form.storagePath,
         whySaved: form.whySaved,
         transcription: form.transcription,
         miningItemId: form.miningItemId === NONE ? null : form.miningItemId,
@@ -116,6 +125,16 @@ export function ReferenceQuickDialog({
               autoFocus
             />
             {error && <p className="text-xs text-destructive">{error}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Ou anexe o vídeo do anúncio</Label>
+            <VideoUploadField
+              path={form.storagePath}
+              pathPrefix="references"
+              onChange={(storagePath) => setForm((f) => ({ ...f, storagePath }))}
+              label="Anexar vídeo"
+            />
           </div>
 
           <div className="space-y-1.5">

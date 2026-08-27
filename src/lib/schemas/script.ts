@@ -47,6 +47,7 @@ export const scriptFormSchema = z
     suggestedFormat: z.string().trim().nullable().default(null),
     editingInstructions: optionalText,
     referenceLinks: optionalText,
+    referenceVideoPath: z.string().trim().nullable().default(null),
     deadline: isoDate.default(null),
     sourceReferenceId: z.string().nullable().default(null),
     ...versionContent,
@@ -86,6 +87,7 @@ export const scriptMetaSchema = z.object({
   suggestedFormat: z.string().trim().nullable().optional(),
   editingInstructions: optionalText.optional(),
   referenceLinks: optionalText.optional(),
+  referenceVideoPath: z.string().trim().nullable().optional(),
   deadline: isoDate.optional(),
 });
 

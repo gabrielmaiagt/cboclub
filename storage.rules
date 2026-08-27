@@ -26,6 +26,22 @@ service firebase.storage {
                    && withinVideoLimit();
     }
 
+    // Video de referencia anexado a uma copy (§4): o que o editor deve
+    // assistir para saber o que produzir.
+    match /scripts/{offerId}/{fileName} {
+      allow read:  if signedIn();
+      allow write: if hasRole(['owner', 'admin', 'criativo', 'trafego'])
+                   && withinVideoLimit();
+    }
+
+    // Video do criativo minerado (§8): anexo do anuncio externo, para o
+    // editor ver o formato quando nao ha link direto.
+    match /references/{fileName} {
+      allow read:  if signedIn();
+      allow write: if hasRole(['owner', 'admin', 'criativo', 'trafego'])
+                   && withinVideoLimit();
+    }
+
     // Comprovante financeiro: so admin ve
     match /receipts/{fileName} {
       allow read, write: if isAdmin();

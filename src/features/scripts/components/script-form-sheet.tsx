@@ -30,6 +30,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { VideoUploadField } from "@/components/shared/storage-video";
 import type { OfferOption, UserOption } from "@/features/scripts/types";
 import { duration } from "@/lib/format";
 import { countWords, estimateDurationSeconds } from "@/lib/metrics";
@@ -77,6 +78,7 @@ export function ScriptFormSheet({
     suggestedFormat: NONE,
     editingInstructions: "",
     referenceLinks: "",
+    referenceVideoPath: null as string | null,
     deadline: "",
   };
   const [form, setForm] = useState(empty);
@@ -123,6 +125,7 @@ export function ScriptFormSheet({
           form.suggestedFormat === NONE ? null : form.suggestedFormat,
         editingInstructions: form.editingInstructions,
         referenceLinks: form.referenceLinks,
+        referenceVideoPath: form.referenceVideoPath,
         deadline: form.deadline || null,
         sourceReferenceId: null,
       });
@@ -319,6 +322,15 @@ export function ScriptFormSheet({
                     onChange={(e) => set("referenceLinks", e.target.value)}
                     placeholder={"https://...\nhttps://..."}
                     rows={2}
+                  />
+                </Field>
+
+                <Field label="Vídeo de referência (o que o editor deve assistir)">
+                  <VideoUploadField
+                    path={form.referenceVideoPath}
+                    pathPrefix={`scripts/${form.offerId}`}
+                    onChange={(v) => set("referenceVideoPath", v)}
+                    disabled={!form.offerId}
                   />
                 </Field>
 
