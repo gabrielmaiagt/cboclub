@@ -5,11 +5,13 @@ import { requireAuth } from "@/lib/auth/guard";
 import { deriveFrom } from "@/lib/metrics";
 import { derive } from "@/lib/metrics";
 import { listActivityByOffer } from "@/services/firestore/activity.repo";
+import { listCreatives } from "@/services/firestore/creatives.repo";
 import {
   aggregateOfferTotals,
   listMetricsByOffer,
 } from "@/services/firestore/metrics.repo";
 import { getOfferByCode } from "@/services/firestore/offers.repo";
+import { listScripts } from "@/services/firestore/scripts.repo";
 import { listUsers } from "@/services/firestore/users.repo";
 import { businessDate, shiftDate } from "@/lib/format";
 
@@ -39,12 +41,15 @@ export default async function OfferDetailPage({ params }: PageProps) {
   if (!offer) notFound();
 
   const today = businessDate();
-  const [totals, series, activity, users] = await Promise.all([
-    aggregateOfferTotals(offer.id),
-    listMetricsByOffer(offer.id, { from: shiftDate(today, -29), to: today }),
-    listActivityByOffer(offer.id),
-    listUsers(),
-  ]);
+  const [totals, series, activity, users, scripts, creatives] =
+    await Promise.all([
+      aggregateOfferTotals(offer.id),
+      listMetricsByOffer(offer.id, { from: shiftDate(today, -29), to: today }),
+      listActivityByOffer(offer.id),
+      listUsers(),
+      listScripts({ offerId: offer.id }),
+      listCreatives({ offerId: offer.id }),
+    ]);
 
   // Totais acumulados: o servidor somou, a aplicacao deriva (§33)
   const lifetime = derive({
@@ -77,6 +82,23 @@ export default async function OfferDetailPage({ params }: PageProps) {
       users={users
         .filter((u) => u.active)
         .map((u) => ({ id: u.id, name: u.fullName }))}
+      scripts={scripts.map((s) => ({
+        id: s.id,
+        code: s.code,
+        title: s.title,
+        status: s.status,
+        currentVersion: s.currentVersion,
+        wordCount: s.current.wordCount,
+        estimatedDurationSeconds: s.current.estimatedDurationSeconds,
+      }))}
+      creatives={creatives.map((c) => ({
+        id: c.id,
+        code: c.code,
+        title: c.title,
+        status: c.status,
+        format: c.format,
+        scriptVersion: c.scriptVersion,
+      }))}
     />
   );
 }

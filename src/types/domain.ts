@@ -464,6 +464,73 @@ export interface Taxonomy {
   angleLibrary: LibraryAngle[];
 }
 
+/**
+ * Criativo.
+ *
+ * `scriptId` + `scriptVersion` apontam para a copy E a versao especifica
+ * usada — se a copy ganhar uma V3 depois, o criativo continua registrando
+ * que foi gravado sobre a V2.
+ */
+export interface Creative extends AuditFields {
+  id: string;
+  code: string;
+  offerId: string;
+  angleId: string | null;
+  scriptId: string | null;
+  scriptVersion: number | null;
+  title: string;
+  hook: string | null;
+  /** Slug de settings/taxonomy.creativeFormats. */
+  format: string | null;
+  platform: TrafficPlatform;
+  durationSeconds: number | null;
+  editorId: string | null;
+  responsibleId: string | null;
+  status: CreativeStatus;
+  /** Caminho no Firebase Storage (creatives/{offerId}/...). */
+  storagePath: string | null;
+  thumbnailPath: string | null;
+  sourceUrl: string | null;
+  inspirationUrl: string | null;
+  /** Slugs de settings/taxonomy.tags. */
+  tags: string[];
+  notes: string | null;
+  editedAt: string | null;
+  approvedAt: string | null;
+  launchedAt: string | null;
+}
+
+/** Conteudo de uma versao de copy. Imutavel depois de criado (§20). */
+export interface ScriptVersionData {
+  version: number;
+  hook: string | null;
+  body: string;
+  cta: string | null;
+  wordCount: number;
+  estimatedDurationSeconds: number;
+  changeNote: string | null;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+/**
+ * Copy. O conteudo vive nas versoes (subcollection `versions/v{n}`);
+ * `current` e um snapshot da versao mais recente para a listagem nao
+ * precisar ler a subcollection.
+ */
+export interface Script extends AuditFields {
+  id: string;
+  code: string;
+  offerId: string;
+  angleId: string | null;
+  title: string;
+  status: ScriptStatus;
+  currentVersion: number;
+  responsibleId: string | null;
+  notes: string | null;
+  current: ScriptVersionData;
+}
+
 // ── Entrada de escrita ──────────────────────────────────────────────
 export type OfferCreateInput = Omit<
   Offer,

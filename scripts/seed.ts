@@ -397,10 +397,303 @@ async function seedSettings() {
 
 async function seedCounters() {
   await db.collection("counters").doc("offers").set({ seq: OFFERS.length });
-  for (const key of ["creatives", "scripts", "experiments", "chips", "mining"]) {
+  await db.collection("counters").doc("scripts").set({ seq: SCRIPTS.length });
+  await db.collection("counters").doc("creatives").set({ seq: CREATIVES.length });
+  for (const key of ["experiments", "chips", "mining"]) {
     await db.collection("counters").doc(key).set({ seq: 0 }, { merge: true });
   }
-  console.log(`  ✓ counters (offers em ${OFFERS.length})`);
+  console.log(
+    `  ✓ counters (offers ${OFFERS.length}, scripts ${SCRIPTS.length}, creatives ${CREATIVES.length})`
+  );
+}
+
+// ── COPIES com versionamento (§19, §20) ─────────────────────────────
+
+const WPM = 150;
+
+function versionPayload(
+  version: number,
+  hook: string | null,
+  body: string,
+  cta: string | null,
+  changeNote: string | null,
+  createdBy: string
+) {
+  const text = [hook, body, cta].filter(Boolean).join(" ");
+  const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+  return {
+    version,
+    hook,
+    body,
+    cta,
+    wordCount,
+    estimatedDurationSeconds: Math.ceil((wordCount / WPM) * 60),
+    changeNote,
+    createdAt: new Date(),
+    createdBy,
+  };
+}
+
+const SCRIPTS = [
+  {
+    id: "script-luxo",
+    code: "CP-0001",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-luxo",
+    title: "Copy principal — ângulo luxo",
+    status: "em_uso",
+    responsibleId: "seed-joao",
+    versions: [
+      versionPayload(
+        1,
+        "Você sabia que essa bolsa custa 300 reais nas lojas de grife?",
+        "Eu descobri um ateliê que faz a mesma bolsa artesanal, no crochê, peça por peça. A diferença é que você não paga pela etiqueta. São mulheres brasileiras produzindo em casa, com o mesmo acabamento das marcas que você vê na vitrine. Cada bolsa leva em média doze horas para ficar pronta. Não existe produção em massa aqui, e é por isso que cada peça é única.",
+        "Chama no WhatsApp e escolhe a sua cor antes que acabe o lote da semana.",
+        "Versão inicial",
+        "seed-joao"
+      ),
+      versionPayload(
+        2,
+        "Essa bolsa custa 300 reais na loja. Aqui sai por 39,90 e eu vou te explicar o porquê.",
+        "O segredo é que você compra direto de quem produz. São mulheres brasileiras que fazem cada peça à mão, no crochê, em casa. Doze horas de trabalho por bolsa. Você não paga vitrine, não paga shopping, não paga etiqueta. Só paga o trabalho. E o acabamento é o mesmo que você vê nas marcas caras, porque a técnica é a mesma. A diferença está na conta, não na bolsa.",
+        "Chama no WhatsApp agora e garante a sua cor. O lote dessa semana tem 40 peças.",
+        "Hook mais direto, ancoragem de preço na primeira linha",
+        "seed-joao"
+      ),
+    ],
+  },
+  {
+    id: "script-preco",
+    code: "CP-0002",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-preco",
+    title: "Copy comparação de preço",
+    status: "revisao",
+    responsibleId: "seed-joao",
+    versions: [
+      versionPayload(
+        1,
+        "R$300 contra R$39,90. Mesma bolsa.",
+        "Coloquei as duas lado a lado e pedi para três amigas adivinharem qual era a cara. Nenhuma acertou. O crochê é o mesmo ponto, o fio é o mesmo algodão, o forro é o mesmo. A única diferença visível é a etiqueta costurada por dentro.",
+        "Quer ver as duas de perto? Chama no WhatsApp que eu mando o vídeo comparativo.",
+        "Versão inicial",
+        "seed-joao"
+      ),
+    ],
+  },
+  {
+    id: "script-geladeira",
+    code: "CP-0003",
+    offerId: "offer-organizador",
+    angleId: "ang-antes-depois",
+    title: "Copy antes e depois — geladeira",
+    status: "aprovado",
+    responsibleId: "seed-socio",
+    versions: [
+      versionPayload(
+        1,
+        "Minha geladeira era uma vergonha. Olha isso agora.",
+        "Dez minutos. Foi o tempo que levei para transformar o caos em organização com o kit de oito peças. Cada pote empilha no outro, tudo transparente, tudo visível. Parei de perder comida vencida no fundo da prateleira e a família inteira acha o que procura.",
+        "Chama no WhatsApp e recebe o kit em até 7 dias.",
+        "Versão inicial",
+        "seed-socio"
+      ),
+    ],
+  },
+] as const;
+
+async function seedScripts() {
+  for (const s of SCRIPTS) {
+    const current = s.versions[s.versions.length - 1];
+    await db.collection("scripts").doc(s.id).set({
+      code: s.code,
+      offerId: s.offerId,
+      angleId: s.angleId,
+      title: s.title,
+      status: s.status,
+      currentVersion: current.version,
+      responsibleId: s.responsibleId,
+      notes: null,
+      current,
+      ...audit(OWNER),
+    });
+    for (const v of s.versions) {
+      await db
+        .collection("scripts")
+        .doc(s.id)
+        .collection("versions")
+        .doc(`v${v.version}`)
+        .set(v);
+    }
+  }
+  console.log(`  ✓ ${SCRIPTS.length} copies com versões`);
+}
+
+// ── CRIATIVOS (§14) ─────────────────────────────────────────────────
+
+const CREATIVES = [
+  {
+    id: "cr-ugc-luxo",
+    code: "CR-0001",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-luxo",
+    scriptId: "script-luxo",
+    scriptVersion: 2,
+    title: "UGC luxo — depoimento na rua",
+    hook: "Essa bolsa custa 300 na loja",
+    format: "ugc",
+    durationSeconds: 42,
+    editorId: "seed-joao",
+    responsibleId: "seed-gabriel",
+    status: "vencedor",
+    tags: ["luxo", "preco", "desejo"],
+  },
+  {
+    id: "cr-narracao-renda",
+    code: "CR-0002",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-renda",
+    scriptId: "script-luxo",
+    scriptVersion: 1,
+    title: "Narração renda extra",
+    hook: "Ganhe dinheiro revendendo crochê",
+    format: "narracao",
+    durationSeconds: 38,
+    editorId: "seed-joao",
+    responsibleId: "seed-gabriel",
+    status: "perdedor",
+    tags: ["renda-extra"],
+  },
+  {
+    id: "cr-story-preco",
+    code: "CR-0003",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-preco",
+    scriptId: "script-preco",
+    scriptVersion: 1,
+    title: "Story comparação de preço",
+    hook: "R$300 contra R$39,90",
+    format: "story",
+    durationSeconds: 28,
+    editorId: "seed-joao",
+    responsibleId: "seed-gabriel",
+    status: "testando",
+    tags: ["preco", "comparacao", "economia"],
+  },
+  {
+    id: "cr-selfie-unboxing",
+    code: "CR-0004",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-luxo",
+    scriptId: null,
+    scriptVersion: null,
+    title: "Selfie — unboxing da bolsa",
+    hook: "Chegou e eu não acreditei",
+    format: "selfie",
+    durationSeconds: 35,
+    editorId: "seed-joao",
+    responsibleId: "seed-gabriel",
+    status: "aguardando_edicao",
+    tags: ["desejo", "prova"],
+  },
+  {
+    id: "cr-antes-depois-look",
+    code: "CR-0005",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-luxo",
+    scriptId: null,
+    scriptVersion: null,
+    title: "Antes e depois — look completo",
+    hook: "Montei três looks com uma bolsa só",
+    format: "antes-depois",
+    durationSeconds: 45,
+    editorId: "seed-joao",
+    responsibleId: "seed-gabriel",
+    status: "editando",
+    tags: ["desejo"],
+  },
+  {
+    id: "cr-comparacao-mesa",
+    code: "CR-0006",
+    offerId: "offer-bolsa-croche",
+    angleId: "ang-preco",
+    scriptId: "script-preco",
+    scriptVersion: 1,
+    title: "Comparação lado a lado",
+    hook: "Coloquei as duas na mesa",
+    format: "comparacao-de-preco",
+    durationSeconds: 31,
+    editorId: "seed-joao",
+    responsibleId: "seed-gabriel",
+    status: "revisao",
+    tags: ["comparacao", "preco"],
+  },
+  {
+    id: "cr-gel-antes-depois",
+    code: "CR-0007",
+    offerId: "offer-organizador",
+    angleId: "ang-antes-depois",
+    scriptId: "script-geladeira",
+    scriptVersion: 1,
+    title: "Antes e depois — geladeira",
+    hook: "Minha geladeira era um caos",
+    format: "antes-depois",
+    durationSeconds: 33,
+    editorId: "seed-joao",
+    responsibleId: "seed-socio",
+    status: "vencedor",
+    tags: ["dor", "prova"],
+  },
+  {
+    id: "cr-gel-demo",
+    code: "CR-0008",
+    offerId: "offer-organizador",
+    angleId: "ang-antes-depois",
+    scriptId: null,
+    scriptVersion: null,
+    title: "Demonstração do kit",
+    hook: "Olha como encaixa",
+    format: "demonstracao",
+    durationSeconds: 40,
+    editorId: "seed-joao",
+    responsibleId: "seed-socio",
+    status: "testando",
+    tags: ["prova"],
+  },
+] as const;
+
+async function seedCreatives() {
+  const batch = db.batch();
+  for (const c of CREATIVES) {
+    const live = c.status === "testando" || c.status === "vencedor" || c.status === "perdedor";
+    batch.set(db.collection("creatives").doc(c.id), {
+      code: c.code,
+      offerId: c.offerId,
+      angleId: c.angleId,
+      scriptId: c.scriptId,
+      scriptVersion: c.scriptVersion,
+      title: c.title,
+      hook: c.hook,
+      format: c.format,
+      platform: "meta",
+      durationSeconds: c.durationSeconds,
+      editorId: c.editorId,
+      responsibleId: c.responsibleId,
+      status: c.status,
+      storagePath: null,
+      thumbnailPath: null,
+      sourceUrl: null,
+      inspirationUrl: null,
+      tags: [...c.tags],
+      notes: null,
+      editedAt: live ? new Date() : null,
+      approvedAt: live ? new Date() : null,
+      launchedAt: live ? new Date() : null,
+      ...audit(OWNER),
+    });
+  }
+  await batch.commit();
+  console.log(`  ✓ ${CREATIVES.length} criativos`);
 }
 
 async function seedOffers() {
@@ -523,24 +816,59 @@ async function seedDecisions() {
 /** Timeline inicial. Em producao estas entradas nascem das server actions. */
 async function seedActivity() {
   const batch = db.batch();
-  for (const offer of OFFERS) {
+  const entry = (
+    entityType: string,
+    entityId: string,
+    entityCode: string,
+    offerId: string,
+    description: string
+  ) =>
     batch.set(db.collection("activity").doc(), {
       actorId: OWNER,
       actorName: "Gabriel Maia",
-      entityType: "offer",
-      entityId: offer.id,
-      entityCode: offer.code,
-      offerId: offer.id,
+      entityType,
+      entityId,
+      entityCode,
+      offerId,
       action: "created",
       field: null,
       oldValue: null,
       newValue: null,
-      description: `Gabriel Maia criou a oferta ${offer.code} — ${offer.name}`,
+      description,
       createdAt: now,
     });
+
+  for (const offer of OFFERS) {
+    entry(
+      "offer",
+      offer.id,
+      offer.code,
+      offer.id,
+      `Gabriel Maia criou a oferta ${offer.code} — ${offer.name}`
+    );
+  }
+  for (const s of SCRIPTS) {
+    entry(
+      "script",
+      s.id,
+      s.code,
+      s.offerId,
+      `Gabriel Maia criou a copy ${s.code} — ${s.title}`
+    );
+  }
+  for (const c of CREATIVES) {
+    entry(
+      "creative",
+      c.id,
+      c.code,
+      c.offerId,
+      `Gabriel Maia criou o criativo ${c.code} — ${c.title}`
+    );
   }
   await batch.commit();
-  console.log(`  ✓ ${OFFERS.length} entradas de activity`);
+  console.log(
+    `  ✓ ${OFFERS.length + SCRIPTS.length + CREATIVES.length} entradas de activity`
+  );
 }
 
 async function main() {
@@ -551,6 +879,8 @@ async function main() {
   await seedSettings();
   await seedCounters();
   await seedOffers();
+  await seedScripts();
+  await seedCreatives();
   await seedDailyMetrics();
   await seedDecisions();
   await seedActivity();

@@ -13,7 +13,8 @@
     "seed:emu": "tsx scripts/seed.ts --emulator",
     "rules:deploy": "firebase deploy --only firestore:rules,storage",
     "indexes:deploy": "firebase deploy --only firestore:indexes",
-    "validate": "tsx --conditions=react-server scripts/validate-flow.ts"
+    "validate": "tsx --conditions=react-server scripts/validate-flow.ts",
+    "validate:phase3": "tsx --conditions=react-server scripts/validate-phase3.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

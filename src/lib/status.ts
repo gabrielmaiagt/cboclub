@@ -10,6 +10,7 @@ import type {
   OfferHealth,
   OfferStatus,
   Priority,
+  ScriptStatus,
   TaskStatus,
 } from "@/types/domain";
 
@@ -109,6 +110,38 @@ export const CREATIVE_STATUS_LABELS: Record<CreativeStatus, string> = {
   perdedor: "Perdedor",
   arquivado: "Arquivado",
 };
+
+export const SCRIPT_STATUS_TONE: Record<ScriptStatus, StatusTone> = {
+  rascunho: "neutral",
+  revisao: "progress",
+  aprovado: "ready",
+  em_uso: "live",
+  arquivado: "dead",
+};
+
+export const SCRIPT_STATUS_LABELS: Record<ScriptStatus, string> = {
+  rascunho: "Rascunho",
+  revisao: "Revisão",
+  aprovado: "Aprovado",
+  em_uso: "Em uso",
+  arquivado: "Arquivado",
+};
+
+/** Colunas do Kanban de criativos (§15), na ordem de producao. */
+export const CREATIVE_KANBAN_COLUMNS: CreativeStatus[] = [
+  "ideia",
+  "modelar",
+  "copy",
+  "aguardando_edicao",
+  "editando",
+  "revisao",
+  "aprovado",
+  "pronto_para_teste",
+  "testando",
+  "vencedor",
+  "perdedor",
+  "arquivado",
+];
 
 export const MINING_STATUS_TONE: Record<MiningStatus, StatusTone> = {
   encontrada: "neutral",

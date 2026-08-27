@@ -49,8 +49,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/ofertas", label: "Ofertas", icon: Package },
       { href: "/mineracao", label: "Mineração", icon: Pickaxe, soon: true },
-      { href: "/criativos", label: "Criativos", icon: Boxes, soon: true },
-      { href: "/copies", label: "Copies", icon: PenLine, soon: true },
+      { href: "/criativos", label: "Criativos", icon: Boxes },
+      { href: "/copies", label: "Copies", icon: PenLine },
       { href: "/testes", label: "Testes", icon: FlaskConical, soon: true },
     ],
   },

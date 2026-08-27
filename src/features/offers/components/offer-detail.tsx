@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
@@ -21,7 +22,15 @@ import { OfferCharts } from "@/features/offers/components/offer-charts";
 import { OfferStatusMenu } from "@/features/offers/components/offer-status-menu";
 import type { UserOption } from "@/features/offers/types";
 import { canWrite } from "@/lib/auth/permissions";
-import { dateTime, EMPTY, money, multiplier, percent, integer } from "@/lib/format";
+import {
+  dateTime,
+  duration as formatDuration,
+  EMPTY,
+  money,
+  multiplier,
+  percent,
+  integer,
+} from "@/lib/format";
 import type { DerivedMetrics } from "@/lib/metrics";
 import {
   OFFER_HEALTH_LABELS,
@@ -43,6 +52,27 @@ interface SeriesPoint {
   roas: number | null;
 }
 
+/** Copy enxuta para a aba Copy. */
+interface ScriptSummary {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  currentVersion: number;
+  wordCount: number;
+  estimatedDurationSeconds: number;
+}
+
+/** Criativo enxuto para a aba Criativos. */
+interface CreativeSummary {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  format: string | null;
+  scriptVersion: number | null;
+}
+
 interface OfferDetailProps {
   offer: Offer;
   lifetime: DerivedMetrics;
@@ -51,6 +81,8 @@ interface OfferDetailProps {
   activity: ActivityEntry[];
   role: AppRole;
   users: UserOption[];
+  scripts: ScriptSummary[];
+  creatives: CreativeSummary[];
 }
 
 /** Card de metrica dos §49. */
@@ -87,6 +119,8 @@ export function OfferDetail({
   activity,
   role,
   users,
+  scripts,
+  creatives,
 }: OfferDetailProps) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -197,8 +231,12 @@ export function OfferDetail({
           <TabsTrigger value="trafego">
             Tráfego {offer.campaigns.length > 0 && `(${offer.campaigns.length})`}
           </TabsTrigger>
-          <TabsTrigger value="copy" disabled>Copy</TabsTrigger>
-          <TabsTrigger value="criativos" disabled>Criativos</TabsTrigger>
+          <TabsTrigger value="copy">
+            Copy {scripts.length > 0 && `(${scripts.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="criativos">
+            Criativos {creatives.length > 0 && `(${creatives.length})`}
+          </TabsTrigger>
           <TabsTrigger value="testes" disabled>Testes</TabsTrigger>
           <TabsTrigger value="chips" disabled>Chips</TabsTrigger>
           <TabsTrigger value="financeiro" disabled>Financeiro</TabsTrigger>
@@ -223,6 +261,82 @@ export function OfferDetail({
               <OfferCharts series={series} />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="copy" className="mt-4">
+          {scripts.length === 0 ? (
+            <TabEmpty text="Nenhuma copy para esta oferta. Crie em Copies → Nova Copy." />
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-border/60">
+              <table className="w-full text-sm">
+                <tbody>
+                  {scripts.map((s) => (
+                    <tr key={s.id} className="border-b border-border/40 last:border-0">
+                      <td className="px-3.5 py-2.5">
+                        <Link href={`/copies/${s.code}`} className="hover:underline">
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            {s.code}
+                          </span>{" "}
+                          <span className="font-medium">{s.title}</span>
+                        </Link>
+                      </td>
+                      <td className="px-3.5 py-2.5 text-center">
+                        <span className="rounded bg-accent/60 px-1.5 py-0.5 text-xs font-medium">
+                          V{s.currentVersion}
+                        </span>
+                      </td>
+                      <td className="tabular px-3.5 py-2.5 text-right text-muted-foreground">
+                        {s.wordCount} palavras
+                      </td>
+                      <td className="px-3.5 py-2.5 text-right text-muted-foreground">
+                        ≈ {formatDuration(s.estimatedDurationSeconds)}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-right text-xs text-muted-foreground">
+                        {s.status}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="criativos" className="mt-4">
+          {creatives.length === 0 ? (
+            <TabEmpty text="Nenhum criativo para esta oferta. Crie em Criativos → Novo Criativo." />
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-border/60">
+              <table className="w-full text-sm">
+                <tbody>
+                  {creatives.map((c) => (
+                    <tr key={c.id} className="border-b border-border/40 last:border-0">
+                      <td className="px-3.5 py-2.5">
+                        <Link
+                          href={`/criativos/${c.code}`}
+                          className="hover:underline"
+                        >
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            {c.code}
+                          </span>{" "}
+                          <span className="font-medium">{c.title}</span>
+                        </Link>
+                      </td>
+                      <td className="px-3.5 py-2.5 text-muted-foreground">
+                        {c.format ?? EMPTY}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-center text-xs text-muted-foreground">
+                        {c.scriptVersion != null ? `copy V${c.scriptVersion}` : EMPTY}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-right text-xs text-muted-foreground">
+                        {c.status.replace(/_/g, " ")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="angulos" className="mt-4">
