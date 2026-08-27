@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { LogOut, Plus, Search } from "lucide-react";
+import { LogOut, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { destroySession } from "@/app/actions/auth";
@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { GlobalSearch } from "@/features/search/components/global-search";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { ROLE_LABELS, type User } from "@/types/domain";
 
@@ -37,7 +38,6 @@ function initials(name: string): string {
 export function Topbar({ user, quickAdd }: TopbarProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [query, setQuery] = useState("");
 
   function handleLogout() {
     startTransition(async () => {
@@ -58,17 +58,9 @@ export function Topbar({ user, quickAdd }: TopbarProps) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 px-4">
-      {/* Busca global (§43) — ativada junto com os demais módulos */}
-      <div className="relative max-w-md flex-1">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar (em breve)"
-          disabled
-          title="A busca global chega junto com os próximos módulos"
-          className="h-10 w-full rounded-lg border border-border/60 bg-background/60 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-ring disabled:cursor-not-allowed disabled:opacity-60"
-        />
+      {/* Busca global (§53) */}
+      <div className="max-w-md flex-1">
+        <GlobalSearch />
       </div>
 
       <div className="ml-auto flex items-center gap-2">
