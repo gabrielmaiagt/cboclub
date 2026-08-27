@@ -1,0 +1,56 @@
+# =====================================================================
+# Config de runtime/build do Firebase App Hosting.
+#
+# NEXT_PUBLIC_* precisam estar disponiveis em BUILD (o Next.js os
+# grava no bundle do cliente nesse momento) e RUNTIME. Sao publicos
+# por design — quem protege os dados sao as Security Rules, nunca o
+# segredo destas strings. FIREBASE_SERVICE_ACCOUNT_JSON fica de fora
+# de proposito: o Admin SDK usa Application Default Credentials via a
+# service account do proprio backend do App Hosting.
+# =====================================================================
+
+runConfig:
+  minInstances: 0
+
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyDYhFEbrJsAElUetuUmyBRn6QZRvU-aUDU"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "cboclub-f815c.firebaseapp.com"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "cboclub-f815c"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "cboclub-f815c.firebasestorage.app"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "24006804989"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:24006804989:web:b6ca1bb22c85a1d6fa4594"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_USE_FIREBASE_EMULATOR
+    value: "false"
+    availability:
+      - BUILD
+      - RUNTIME
