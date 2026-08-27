@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ref as storageRef, uploadBytes } from "firebase/storage";
-import { FileVideo, Loader2, X } from "lucide-react";
+import { ChevronDown, FileVideo, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -11,6 +11,11 @@ import {
   updateCreativeAction,
 } from "@/app/actions/creatives";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -138,13 +143,15 @@ export function CreativeFormSheet({
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<FormState>(emptyState);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [showMore, setShowMore] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setForm(creative ? fromCreative(creative) : emptyState());
     setErrors({});
-  }, [open, creative]);
+    setShowMore(mode === "edit");
+  }, [open, creative, mode]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -297,12 +304,111 @@ export function CreativeFormSheet({
               </Select>
             </Field>
 
-            <Field label="Título" error={fieldError("title")} required>
+            {/* Vinculo copy + versao especifica usada */}
+            <div className="grid grid-cols-[1fr_auto] gap-3">
+              <Field label="Copy">
+                <Select
+                  value={form.scriptId}
+                  onValueChange={(v) => {
+                    set("scriptId", v);
+                    const script = offerScripts.find((s) => s.id === v);
+                    set(
+                      "scriptVersion",
+                      script ? String(script.currentVersion) : ""
+                    );
+                  }}
+                  disabled={!selectedOffer}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhuma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Nenhuma</SelectItem>
+                    {offerScripts.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.code} · {s.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field label="Versão">
+                <Select
+                  value={form.scriptVersion || undefined}
+                  onValueChange={(v) => set("scriptVersion", v)}
+                  disabled={!selectedScript}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {versionOptions.map((v) => (
+                      <SelectItem key={v} value={v}>
+                        V{v}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Editor">
+                <Select
+                  value={form.editorId}
+                  onValueChange={(v) => set("editorId", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ninguém" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Ninguém</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field label="Status">
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => set("status", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {CREATIVE_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {CREATIVE_STATUS_LABELS[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            {/* Detalhes secundarios: nada disto bloqueia o cadastro (§7) */}
+            <Collapsible open={showMore} onOpenChange={setShowMore}>
+              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 transition-transform",
+                    showMore && "rotate-180"
+                  )}
+                />
+                Mais detalhes (título, formato, tags, arquivo...)
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-3">
+            <Field label="Título" error={fieldError("title")}>
               <Input
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
-                placeholder="UGC luxo — depoimento na rua"
-                required
+                placeholder="Vazio herda o título da copy"
               />
             </Field>
 
@@ -356,55 +462,6 @@ export function CreativeFormSheet({
               </Field>
             </div>
 
-            {/* Vinculo copy + versao especifica usada */}
-            <div className="grid grid-cols-[1fr_auto] gap-3">
-              <Field label="Copy">
-                <Select
-                  value={form.scriptId}
-                  onValueChange={(v) => {
-                    set("scriptId", v);
-                    const script = offerScripts.find((s) => s.id === v);
-                    set(
-                      "scriptVersion",
-                      script ? String(script.currentVersion) : ""
-                    );
-                  }}
-                  disabled={!selectedOffer}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nenhuma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Nenhuma</SelectItem>
-                    {offerScripts.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.code} · {s.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <Field label="Versão">
-                <Select
-                  value={form.scriptVersion || undefined}
-                  onValueChange={(v) => set("scriptVersion", v)}
-                  disabled={!selectedScript}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {versionOptions.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        V{v}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-
             <div className="grid grid-cols-3 gap-3">
               <Field label="Plataforma">
                 <Select
@@ -431,45 +488,6 @@ export function CreativeFormSheet({
                   placeholder="42"
                   inputMode="numeric"
                 />
-              </Field>
-
-              <Field label="Status">
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => set("status", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {CREATIVE_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {CREATIVE_STATUS_LABELS[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Editor">
-                <Select
-                  value={form.editorId}
-                  onValueChange={(v) => set("editorId", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Ninguém" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Ninguém</SelectItem>
-                    {users.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </Field>
 
               <Field label="Responsável">
@@ -591,6 +609,8 @@ export function CreativeFormSheet({
                 rows={2}
               />
             </Field>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <SheetFooter className="flex-row justify-end gap-2 border-t border-border/60 px-5 py-3">

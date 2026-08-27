@@ -64,8 +64,36 @@ function toScript(doc: FirebaseFirestore.DocumentSnapshot): Script {
     responsibleId: d.responsibleId ?? null,
     notes: d.notes ?? null,
     current: toVersionData(d.current ?? { version: 1 }),
+    suggestedFormat: d.suggestedFormat ?? null,
+    editingInstructions: d.editingInstructions ?? null,
+    referenceLinks: d.referenceLinks ?? null,
+    deadline: d.deadline ?? null,
+    sourceReferenceId: d.sourceReferenceId ?? null,
     ...readAudit(d),
   };
+}
+
+/**
+ * Titulo derivado quando o usuario nao informa (quick capture):
+ * primeiras palavras do hook, senao do corpo, senao placeholder.
+ */
+export function deriveScriptTitle(input: {
+  title: string | null;
+  hook: string | null;
+  body: string;
+}): string {
+  if (input.title) return input.title;
+  const source = input.hook || input.body;
+  if (!source) return "Copy sem título";
+  const words = source.trim().split(/\s+/).slice(0, 7).join(" ");
+  return words.length < source.trim().length ? `${words}…` : words;
+}
+
+/** Conversor exposto para outros repos (referencias). */
+export function toScriptPublic(
+  doc: FirebaseFirestore.DocumentSnapshot
+): Script {
+  return toScript(doc);
 }
 
 export async function getScriptById(id: string): Promise<Script | null> {
@@ -156,6 +184,8 @@ export async function createScript(
   // WPM lido fora da transacao: leituras precisam vir antes das escritas
   const { copyWordsPerMinute } = await getAppSettings();
 
+  const title = deriveScriptTitle(input);
+
   await db.runTransaction(async (tx) => {
     const code = await nextCode(COUNTER_KEYS.scripts, tx);
 
@@ -173,11 +203,16 @@ export async function createScript(
         code,
         offerId: input.offerId,
         angleId: input.angleId,
-        title: input.title,
+        title,
         status: input.status,
         currentVersion: 1,
         responsibleId: input.responsibleId,
         notes: input.notes,
+        suggestedFormat: input.suggestedFormat,
+        editingInstructions: input.editingInstructions,
+        referenceLinks: input.referenceLinks,
+        deadline: input.deadline,
+        sourceReferenceId: input.sourceReferenceId,
         current: v1,
         ...auditOnCreate(actor.uid),
       })
@@ -195,7 +230,7 @@ export async function createScript(
         entityCode: code,
         offerId: input.offerId,
         action: "created",
-        description: `${actor.name ?? "Alguém"} criou a copy ${code} — ${input.title}`,
+        description: `${actor.name ?? "Alguém"} criou a copy ${code} — ${title}`,
       },
       db
     );

@@ -2,11 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createScriptAction } from "@/app/actions/scripts";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -45,16 +50,18 @@ export function ScriptFormSheet({
   onOpenChange,
   offers,
   users,
+  formats = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   offers: OfferOption[];
   users: UserOption[];
+  formats?: { slug: string; name: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [form, setForm] = useState({
+  const empty = {
     offerId: "",
     angleId: NONE,
     title: "",
@@ -64,22 +71,20 @@ export function ScriptFormSheet({
     body: "",
     cta: "",
     notes: "",
-  });
+    suggestedFormat: NONE,
+    editingInstructions: "",
+    referenceLinks: "",
+    deadline: "",
+  };
+  const [form, setForm] = useState(empty);
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setForm({
-      offerId: "",
-      angleId: NONE,
-      title: "",
-      status: "rascunho",
-      responsibleId: NONE,
-      hook: "",
-      body: "",
-      cta: "",
-      notes: "",
-    });
+    setForm(empty);
     setErrors({});
+    setShowMore(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -103,13 +108,19 @@ export function ScriptFormSheet({
       const result = await createScriptAction({
         offerId: form.offerId,
         angleId: form.angleId === NONE ? null : form.angleId,
-        title: form.title.trim(),
+        title: form.title.trim(), // vazio -> servidor deriva do hook
         status: form.status,
         responsibleId: form.responsibleId === NONE ? null : form.responsibleId,
         notes: form.notes,
         hook: form.hook,
         body: form.body,
         cta: form.cta,
+        suggestedFormat:
+          form.suggestedFormat === NONE ? null : form.suggestedFormat,
+        editingInstructions: form.editingInstructions,
+        referenceLinks: form.referenceLinks,
+        deadline: form.deadline || null,
+        sourceReferenceId: null,
       });
 
       if (!result.ok) {
@@ -163,20 +174,19 @@ export function ScriptFormSheet({
                 </Select>
               </Field>
 
-              <Field label="Ângulo">
+              <Field label="Editor / Responsável">
                 <Select
-                  value={form.angleId}
-                  onValueChange={(v) => set("angleId", v)}
-                  disabled={!selectedOffer}
+                  value={form.responsibleId}
+                  onValueChange={(v) => set("responsibleId", v)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Nenhum" />
+                    <SelectValue placeholder="Ninguém" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE}>Nenhum</SelectItem>
-                    {selectedOffer?.angles.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name}
+                    <SelectItem value={NONE}>Ninguém</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -184,16 +194,7 @@ export function ScriptFormSheet({
               </Field>
             </div>
 
-            <Field label="Título" error={errors.title?.[0]} required>
-              <Input
-                value={form.title}
-                onChange={(e) => set("title", e.target.value)}
-                placeholder="Copy principal — ângulo luxo"
-                required
-              />
-            </Field>
-
-            <Field label="Hook">
+            <Field label="Hook" error={errors.body?.[0]}>
               <Textarea
                 value={form.hook}
                 onChange={(e) => set("hook", e.target.value)}
@@ -229,41 +230,109 @@ export function ScriptFormSheet({
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Status">
-                <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SCRIPT_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {SCRIPT_STATUS_LABELS[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+            {/* Briefing de producao (§4): opcional, nunca bloqueia */}
+            <Collapsible open={showMore} onOpenChange={setShowMore}>
+              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 transition-transform",
+                    showMore && "rotate-180"
+                  )}
+                />
+                Briefing e detalhes (formato, instruções, prazo...)
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Título (vazio deriva do hook)">
+                    <Input
+                      value={form.title}
+                      onChange={(e) => set("title", e.target.value)}
+                      placeholder="Copy principal — ângulo luxo"
+                    />
+                  </Field>
+                  <Field label="Ângulo">
+                    <Select
+                      value={form.angleId}
+                      onValueChange={(v) => set("angleId", v)}
+                      disabled={!selectedOffer}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Nenhum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Nenhum</SelectItem>
+                        {selectedOffer?.angles.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
 
-              <Field label="Responsável">
-                <Select
-                  value={form.responsibleId}
-                  onValueChange={(v) => set("responsibleId", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Ninguém" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Ninguém</SelectItem>
-                    {users.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Formato sugerido">
+                    <Select
+                      value={form.suggestedFormat}
+                      onValueChange={(v) => set("suggestedFormat", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Nenhum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Nenhum</SelectItem>
+                        {formats.map((f) => (
+                          <SelectItem key={f.slug} value={f.slug}>
+                            {f.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Prazo de produção">
+                    <Input
+                      type="date"
+                      value={form.deadline}
+                      onChange={(e) => set("deadline", e.target.value)}
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Instruções de edição">
+                  <Textarea
+                    value={form.editingInstructions}
+                    onChange={(e) => set("editingInstructions", e.target.value)}
+                    placeholder="Legendas queimadas, cortes rápidos no hook, b-roll do produto aos 10s..."
+                    rows={3}
+                  />
+                </Field>
+
+                <Field label="Referências (um link por linha)">
+                  <Textarea
+                    value={form.referenceLinks}
+                    onChange={(e) => set("referenceLinks", e.target.value)}
+                    placeholder={"https://...\nhttps://..."}
+                    rows={2}
+                  />
+                </Field>
+
+                <Field label="Status">
+                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SCRIPT_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {SCRIPT_STATUS_LABELS[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <SheetFooter className="flex-row justify-end gap-2 border-t border-border/60 px-5 py-3">

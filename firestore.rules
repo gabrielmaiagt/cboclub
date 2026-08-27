@@ -101,6 +101,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Referencias externas (swipe file, §8) ───────────────────────
+    // Ativos de TERCEIROS, separados de creatives. Quem produz e quem
+    // minera salva referencia: mesmo grupo de escrita dos criativos.
+    match /creativeReferences/{referenceId} {
+      allow read:   if signedIn();
+      allow create: if writeCreative() && hasExplicitDeletedAt();
+      allow update: if writeCreative();
+      allow delete: if false;  // soft delete
+    }
+
     // ── Metricas ────────────────────────────────────────────────────
     // Doc id = `${date}_${offerId}`. Sem campos derivados: CTR, CPA e
     // ROAS sao calculados pela aplicacao na leitura.

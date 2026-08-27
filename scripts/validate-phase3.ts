@@ -358,6 +358,195 @@ async function main() {
   // limpeza do doc criado pelo teste de rules
   const { adminDb } = await import("../src/lib/firebase/admin");
   await adminDb().collection("creatives").doc("rules-test-joao").delete();
+  const adminDbForCleanup = adminDb;
+
+  // ── 5b. Quick capture: titulos derivados ──────────────────────────
+  const quickScript = await createScript(
+    scriptFormSchema.parse({
+      offerId: "offer-bolsa-croche",
+      hook: "Esse hook vira o título da copy automaticamente sem esforço",
+      body: "corpo curto",
+    }),
+    actor
+  );
+  check(
+    "copy sem título deriva o título do hook",
+    quickScript.title.startsWith("Esse hook vira o título"),
+    quickScript.title
+  );
+
+  const quickCreative = await createCreative(
+    creativeFormSchema.parse({
+      offerId: "offer-bolsa-croche",
+      scriptId: script.id,
+      scriptVersion: 1,
+    }),
+    actor
+  );
+  check(
+    "criativo sem título herda o título da copy vinculada",
+    quickCreative.title === script.title,
+    quickCreative.title
+  );
+
+  // ── 5c. Referencias: fluxo completo (§21) ─────────────────────────
+  const {
+    createReference,
+    updateReference,
+    getReferenceByCode,
+    createModelagem,
+    listModelagens,
+  } = await import("../src/services/firestore/references.repo");
+  const { referenceQuickSchema } = await import("../src/lib/schemas/reference");
+
+  // salvar rapidamente: so o link
+  const reference = await createReference(
+    referenceQuickSchema.parse({
+      url: "https://facebook.com/ads/library/?id=999",
+      whySaved: "Referência da validação E2E",
+    }),
+    actor
+  );
+  check(
+    "referência salva rapidamente com código sequencial (REF-CR-0005)",
+    reference.code === "REF-CR-0005",
+    `veio ${reference.code}`
+  );
+  check("referência nasce com status Salvo", reference.status === "salvo");
+  check("deletedAt da referência nasce explicitamente null",
+    reference.deletedAt === null);
+
+  // quick capture exige link OU arquivo
+  const noLink = referenceQuickSchema.safeParse({ whySaved: "sem link" });
+  check("quick capture sem link nem arquivo é rejeitado", !noLink.success);
+
+  // adicionar transcricao depois
+  await updateReference(
+    reference.id,
+    { transcription: "Transcrição colada da ferramenta externa." },
+    actor
+  );
+  // relacionar a oferta minerada depois
+  await updateReference(reference.id, { miningItemId: "min-bolsa" }, actor);
+  // marcar para modelar
+  await updateReference(reference.id, { status: "modelar" }, actor);
+
+  const refAfter = await getReferenceByCode(reference.code);
+  check(
+    "transcrição + oferta minerada + status adicionados depois",
+    refAfter?.transcription === "Transcrição colada da ferramenta externa." &&
+      refAfter.miningItemId === "min-bolsa" &&
+      refAfter.status === "modelar"
+  );
+
+  // criar modelagem: REF -> copy interna rascunho
+  const modeled = await createModelagem(
+    reference.id,
+    "offer-bolsa-croche",
+    actor
+  );
+  check(
+    "modelagem cria copy interna vinculada (sourceReferenceId)",
+    modeled.sourceReferenceId === reference.id
+  );
+  check(
+    "corpo da modelagem parte da transcrição (original preservado)",
+    modeled.current.body === "Transcrição colada da ferramenta externa."
+  );
+
+  const refModeled = await getReferenceByCode(reference.code);
+  check(
+    "referência vira Modelado após a modelagem",
+    refModeled?.status === "modelado"
+  );
+  check(
+    "transcrição original NÃO foi sobrescrita pela modelagem",
+    refModeled?.transcription === "Transcrição colada da ferramenta externa."
+  );
+
+  const modelagens = await listModelagens(reference.id);
+  check(
+    "listModelagens devolve a copy criada",
+    modelagens.some((m) => m.id === modeled.id)
+  );
+
+  // auditoria do fluxo de referencia
+  const refTimeline = await listActivityByEntity("reference", reference.id);
+  const refActions = refTimeline.map((t) => t.action);
+  check(
+    "timeline da referência: created + updated + status_changed",
+    refActions.includes("created") &&
+      refActions.includes("updated") &&
+      refActions.includes("status_changed"),
+    refActions.join(", ")
+  );
+
+  // dossie: referencias por oferta minerada (§14)
+  const { listReferences } = await import(
+    "../src/services/firestore/references.repo"
+  );
+  const dossie = await listReferences({ miningItemId: "min-bolsa" });
+  check(
+    "dossiê da oferta minerada lista as referências relacionadas",
+    dossie.some((r) => r.id === reference.id) &&
+      dossie.some((r) => r.code === "REF-CR-0001")
+  );
+
+  // ── 5d. Rules das referencias ─────────────────────────────────────
+  const mariaRef = await fsWrite(
+    "POST",
+    "creativeReferences?documentId=rules-ref-maria",
+    mariaToken,
+    {
+      code: str("REF-RULES"),
+      url: str("https://x.com"),
+      status: str("salvo"),
+      deletedAt: nul,
+    }
+  );
+  check(
+    "rules: operacao NÃO salva referência (403)",
+    mariaRef.status === 403,
+    `HTTP ${mariaRef.status}`
+  );
+
+  const joaoRef = await fsWrite(
+    "POST",
+    "creativeReferences?documentId=rules-ref-joao",
+    joaoToken,
+    {
+      code: str("REF-RULES"),
+      url: str("https://x.com"),
+      status: str("salvo"),
+      deletedAt: nul,
+    }
+  );
+  check(
+    "rules: criativo PODE salvar referência (200)",
+    joaoRef.status === 200,
+    `HTTP ${joaoRef.status}`
+  );
+  await adminDbForCleanup()
+    .collection("creativeReferences")
+    .doc("rules-ref-joao")
+    .delete();
+
+  // pagina da referencia renderiza com as secoes
+  const refPage = await get(`/referencias/${reference.code}`, cookie);
+  const refHtml = await refPage.text();
+  check(
+    "página da referência renderiza com modelagem e timeline",
+    refPage.status === 200 &&
+      refHtml.includes(modeled.code) &&
+      refHtml.includes("Transcrição original")
+  );
+
+  const refsList = await get("/referencias", cookie);
+  const refsHtml = await refsList.text();
+  check(
+    "listagem /referencias mostra as referências do seed",
+    refsList.status === 200 && refsHtml.includes("REF-CR-0001")
+  );
 
   // ── 6. Paginas dos registros novos ────────────────────────────────
   const newCreativePage = await get(`/criativos/${creative.code}`, cookie);

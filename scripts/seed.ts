@@ -296,6 +296,141 @@ const OFFERS = [
   },
 ] as const;
 
+/**
+ * Wipe completo do Firestore do emulador antes de semear: sem isto,
+ * documentos criados por validacoes anteriores sobreviveriam ao reseed e
+ * os codigos sequenciais deixariam de ser deterministicos.
+ */
+async function wipeEmulator() {
+  if (!USE_EMULATOR) return;
+  const host = process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8480";
+  const res = await fetch(
+    `http://${host}/emulator/v1/projects/${projectId}/databases/(default)/documents`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    throw new Error(`wipe do emulador falhou: HTTP ${res.status}`);
+  }
+  console.log("  ✓ emulador limpo");
+}
+
+// ── MINERACAO minima (Fase 5 tera o modulo completo) ────────────────
+
+const MINING = [
+  {
+    id: "min-bolsa",
+    code: "MIN-0001",
+    name: "Bolsa de Crochê Artesanal",
+    url: "https://facebook.com/ads/library/?id=111",
+    whyInteresting: "Anúncio rodando há 62 dias com 40+ criativos ativos",
+    status: "convertida",
+    niche: "moda feminina",
+    convertedOfferId: "offer-bolsa-croche",
+  },
+  {
+    id: "min-pulseira",
+    code: "MIN-0002",
+    name: "Pulseira Magnética Terapêutica",
+    url: "https://facebook.com/ads/library/?id=222",
+    whyInteresting: "Escala agressiva no público 45+, checkout simples",
+    status: "interessante",
+    niche: "saúde",
+    convertedOfferId: null,
+  },
+] as const;
+
+async function seedMining() {
+  const batch = db.batch();
+  for (const m of MINING) {
+    batch.set(db.collection("miningItems").doc(m.id), {
+      code: m.code,
+      name: m.name,
+      url: m.url,
+      whyInteresting: m.whyInteresting,
+      status: m.status,
+      niche: m.niche,
+      promise: null,
+      mechanism: null,
+      price: null,
+      advertiser: null,
+      notes: null,
+      convertedOfferId: m.convertedOfferId,
+      ...audit(OWNER),
+    });
+  }
+  await batch.commit();
+  console.log(`  ✓ ${MINING.length} ofertas mineradas`);
+}
+
+// ── REFERENCIAS externas / swipe file (§8) ──────────────────────────
+
+const REFERENCES = [
+  {
+    id: "ref-comparacao",
+    code: "REF-CR-0001",
+    url: "https://facebook.com/ads/library/?id=333",
+    whySaved: "Hook de comparação de preço muito forte, 40 dias no ar",
+    transcription:
+      "Trezentos reais numa bolsa? Eu pagava. Até descobrir que a mesma bolsa, do mesmo crochê, sai por menos de cinquenta direto de quem faz. Passa pro lado que eu te mostro a diferença... porque não tem.",
+    miningItemId: "min-bolsa",
+    status: "modelado",
+    source: "Biblioteca Meta",
+  },
+  {
+    id: "ref-pov-cozinha",
+    code: "REF-CR-0002",
+    url: "https://tiktok.com/@org/video/444",
+    whySaved: "POV de organização viralizou, formato replicável pra geladeira",
+    transcription: null,
+    miningItemId: null,
+    status: "modelar",
+    source: "TikTok",
+  },
+  {
+    id: "ref-depoimento-45",
+    code: "REF-CR-0003",
+    url: "https://facebook.com/ads/library/?id=555",
+    whySaved: "Depoimento de senhora 60+ com dor no punho, público engaja",
+    transcription: null,
+    miningItemId: "min-pulseira",
+    status: "salvo",
+    source: "Biblioteca Meta",
+  },
+  {
+    id: "ref-descartada",
+    code: "REF-CR-0004",
+    url: "https://facebook.com/ads/library/?id=666",
+    whySaved: "Parecia bom, mas é ângulo de urgência falsa — não usamos",
+    transcription: null,
+    miningItemId: null,
+    status: "descartado",
+    source: "Biblioteca Meta",
+  },
+] as const;
+
+async function seedReferences() {
+  const batch = db.batch();
+  for (const r of REFERENCES) {
+    batch.set(db.collection("creativeReferences").doc(r.id), {
+      code: r.code,
+      url: r.url,
+      storagePath: null,
+      transcription: r.transcription,
+      whySaved: r.whySaved,
+      analysis: null,
+      miningItemId: r.miningItemId,
+      status: r.status,
+      advertiser: null,
+      format: null,
+      source: r.source,
+      notes: null,
+      ...audit(OWNER),
+    });
+  }
+  await batch.commit();
+  console.log(`  ✓ ${REFERENCES.length} referências externas`);
+}
+
 async function seedUsers() {
   for (const u of USERS) {
     if (USE_EMULATOR) {
@@ -399,11 +534,16 @@ async function seedCounters() {
   await db.collection("counters").doc("offers").set({ seq: OFFERS.length });
   await db.collection("counters").doc("scripts").set({ seq: SCRIPTS.length });
   await db.collection("counters").doc("creatives").set({ seq: CREATIVES.length });
-  for (const key of ["experiments", "chips", "mining"]) {
+  await db.collection("counters").doc("mining").set({ seq: MINING.length });
+  await db
+    .collection("counters")
+    .doc("references")
+    .set({ seq: REFERENCES.length });
+  for (const key of ["experiments", "chips"]) {
     await db.collection("counters").doc(key).set({ seq: 0 }, { merge: true });
   }
   console.log(
-    `  ✓ counters (offers ${OFFERS.length}, scripts ${SCRIPTS.length}, creatives ${CREATIVES.length})`
+    `  ✓ counters (offers ${OFFERS.length}, scripts ${SCRIPTS.length}, creatives ${CREATIVES.length}, refs ${REFERENCES.length})`
   );
 }
 
@@ -514,6 +654,16 @@ async function seedScripts() {
       currentVersion: current.version,
       responsibleId: s.responsibleId,
       notes: null,
+      // Briefing de producao (§4)
+      suggestedFormat: s.id === "script-luxo" ? "ugc" : null,
+      editingInstructions:
+        s.id === "script-luxo"
+          ? "Legendas queimadas, corte rápido no hook, mostrar a bolsa nos primeiros 3s."
+          : null,
+      referenceLinks: null,
+      deadline: null,
+      // Modelagem (§12): CP-0001 nasceu da referência REF-CR-0001
+      sourceReferenceId: s.id === "script-luxo" ? "ref-comparacao" : null,
       current,
       ...audit(OWNER),
     });
@@ -875,10 +1025,13 @@ async function main() {
   console.log(
     `\nSemeando ${USE_EMULATOR ? "EMULADORES locais" : `projeto ${projectId}`}\n`
   );
+  await wipeEmulator();
   await seedUsers();
   await seedSettings();
   await seedCounters();
   await seedOffers();
+  await seedMining();
+  await seedReferences();
   await seedScripts();
   await seedCreatives();
   await seedDailyMetrics();

@@ -1,4 +1,5 @@
 import {
+  BookMarked,
   Boxes,
   ClipboardList,
   Coins,
@@ -51,6 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/mineracao", label: "Mineração", icon: Pickaxe, soon: true },
       { href: "/criativos", label: "Criativos", icon: Boxes },
       { href: "/copies", label: "Copies", icon: PenLine },
+      { href: "/referencias", label: "Referências", icon: BookMarked },
       { href: "/testes", label: "Testes", icon: FlaskConical, soon: true },
     ],
   },

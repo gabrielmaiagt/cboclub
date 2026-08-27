@@ -22,6 +22,7 @@ import type { CreativeRow } from "@/features/creatives/types";
 import { EMPTY } from "@/lib/format";
 import {
   CREATIVE_KANBAN_COLUMNS,
+  CREATIVE_KANBAN_CORE,
   CREATIVE_STATUS_LABELS,
   CREATIVE_STATUS_TONE,
   TONE_DOT,
@@ -150,6 +151,20 @@ export function CreativesKanban({
     return map;
   }, [effective]);
 
+  /**
+   * Interface leve (§7): colunas raras so aparecem quando tem card ou
+   * durante um drag (para poderem receber o drop). A granularidade
+   * completa continua no banco e no menu de status.
+   */
+  const visibleColumns = useMemo(() => {
+    if (activeId) return CREATIVE_KANBAN_COLUMNS;
+    return CREATIVE_KANBAN_COLUMNS.filter(
+      (status) =>
+        (CREATIVE_KANBAN_CORE as CreativeStatus[]).includes(status) ||
+        (byStatus.get(status)?.length ?? 0) > 0
+    );
+  }, [activeId, byStatus]);
+
   const activeRow = effective.find((r) => r.creative.id === activeId) ?? null;
 
   function handleDragStart(event: DragStartEvent) {
@@ -193,7 +208,7 @@ export function CreativesKanban({
       onDragEnd={handleDragEnd}
     >
       <div className="thin-scroll flex gap-3 overflow-x-auto pb-4">
-        {CREATIVE_KANBAN_COLUMNS.map((status) => (
+        {visibleColumns.map((status) => (
           <Column
             key={status}
             status={status}

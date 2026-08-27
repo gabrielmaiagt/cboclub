@@ -148,6 +148,18 @@ export async function createCreative(
   const db = adminDb();
   const ref = db.collection(COL.creatives).doc();
 
+  // Quick capture (§7): titulo e opcional — herda o titulo da copy
+  // vinculada, senao ganha um placeholder renomeavel depois.
+  let title = input.title;
+  if (!title && input.scriptId) {
+    const scriptSnap = await db
+      .collection(COL.scripts)
+      .doc(input.scriptId)
+      .get();
+    title = scriptSnap.exists ? (scriptSnap.data()?.title ?? null) : null;
+  }
+  title = title || "Sem título";
+
   await db.runTransaction(async (tx) => {
     const code = await nextCode(COUNTER_KEYS.creatives, tx);
 
@@ -156,6 +168,7 @@ export async function createCreative(
       stripUndefined({
         code,
         ...docFields(input),
+        title,
         editedAt: null,
         approvedAt: null,
         launchedAt: null,
@@ -178,7 +191,7 @@ export async function createCreative(
         entityCode: code,
         offerId: input.offerId,
         action: "created",
-        description: `${actor.name ?? "Alguém"} criou o criativo ${code} — ${input.title}`,
+        description: `${actor.name ?? "Alguém"} criou o criativo ${code} — ${title}`,
       },
       db
     );
@@ -202,9 +215,16 @@ export async function updateCreative(
 
   const batch = db.batch();
   const stamps = patch.status ? lifecycleStamps(patch.status, before) : {};
+  // Titulo nulo em update significa "nao mexer" — nunca apagar o existente
+  const { title: patchTitle, ...rest } = patch;
   batch.update(
     ref,
-    stripUndefined({ ...patch, ...stamps, ...auditOnUpdate(actor.uid) })
+    stripUndefined({
+      ...rest,
+      ...(patchTitle ? { title: patchTitle } : {}),
+      ...stamps,
+      ...auditOnUpdate(actor.uid),
+    })
   );
 
   if (patch.status && patch.status !== before.status) {

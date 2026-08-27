@@ -9,6 +9,7 @@ export const COL = {
   offers: "offers",
   scripts: "scripts",
   creatives: "creatives",
+  creativeReferences: "creativeReferences",
   dailyMetrics: "dailyMetrics",
   creativeMetrics: "creativeMetrics",
   experiments: "experiments",
@@ -45,6 +46,7 @@ export const COUNTER_KEYS = {
   experiments: "experiments",
   chips: "chips",
   mining: "mining",
+  references: "references",
 } as const;
 
 export type CounterKey = (typeof COUNTER_KEYS)[keyof typeof COUNTER_KEYS];
@@ -57,6 +59,7 @@ export const CODE_FORMAT: Record<CounterKey, { prefix: string; width: number }> 
   experiments: { prefix: "TEST", width: 4 },
   chips: { prefix: "CHIP", width: 3 },
   mining: { prefix: "MIN", width: 4 },
+  references: { prefix: "REF-CR", width: 4 },
 };
 
 export function formatCode(key: CounterKey, seq: number): string {

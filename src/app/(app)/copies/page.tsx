@@ -3,6 +3,7 @@ import type { ScriptRow } from "@/features/scripts/types";
 import { requireAuth } from "@/lib/auth/guard";
 import { listOffers } from "@/services/firestore/offers.repo";
 import { listScripts } from "@/services/firestore/scripts.repo";
+import { getTaxonomy } from "@/services/firestore/settings.repo";
 import { listUsers } from "@/services/firestore/users.repo";
 
 export const metadata = { title: "Copies" };
@@ -16,10 +17,11 @@ export const dynamic = "force-dynamic";
 export default async function ScriptsPage() {
   const ctx = await requireAuth();
 
-  const [scripts, offers, users] = await Promise.all([
+  const [scripts, offers, users, taxonomy] = await Promise.all([
     listScripts(),
     listOffers(),
     listUsers(),
+    getTaxonomy(),
   ]);
 
   const offerById = new Map(offers.map((o) => [o.id, o]));
@@ -52,6 +54,10 @@ export default async function ScriptsPage() {
         .filter((u) => u.active)
         .map((u) => ({ id: u.id, name: u.fullName }))}
       role={ctx.role}
+      formats={taxonomy.creativeFormats.map((f) => ({
+        slug: f.slug,
+        name: f.name,
+      }))}
     />
   );
 }

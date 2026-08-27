@@ -61,6 +61,23 @@
       ]
     },
     {
+      "collectionGroup": "creativeReferences",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "creativeReferences",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "miningItemId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "dailyMetrics",
       "queryScope": "COLLECTION",
       "fields": [

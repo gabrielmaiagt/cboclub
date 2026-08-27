@@ -2,11 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createOfferAction, updateOfferAction } from "@/app/actions/offers";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -112,13 +117,16 @@ export function OfferFormSheet({
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState<FormState>(emptyState);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  // Na edicao os detalhes ja interessam; na criacao ficam recolhidos
+  const [showMore, setShowMore] = useState(false);
 
   // Recarrega o formulario sempre que o sheet abre
   useEffect(() => {
     if (!open) return;
     setForm(offer ? fromOffer(offer) : emptyState());
     setErrors({});
-  }, [open, offer]);
+    setShowMore(mode === "edit");
+  }, [open, offer, mode]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -208,6 +216,7 @@ export function OfferFormSheet({
           className="thin-scroll flex min-h-0 flex-1 flex-col"
         >
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            {/* Quick capture (§18): nome + status + responsavel. So. */}
             <Field label="Nome da oferta" error={fieldError("name")} required>
               <Input
                 value={form.name}
@@ -219,56 +228,19 @@ export function OfferFormSheet({
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Nicho">
-                <Input
-                  value={form.niche}
-                  onChange={(e) => set("niche", e.target.value)}
-                  placeholder="moda feminina"
-                />
-              </Field>
-              <Field label="Sub-nicho">
-                <Input
-                  value={form.subNiche}
-                  onChange={(e) => set("subNiche", e.target.value)}
-                  placeholder="acessórios"
-                />
-              </Field>
-            </div>
-
-            <Field label="Promessa principal">
-              <Textarea
-                value={form.mainPromise}
-                onChange={(e) => set("mainPromise", e.target.value)}
-                placeholder="Bolsa artesanal de luxo por menos de R$50"
-                rows={2}
-              />
-            </Field>
-
-            <Field label="Mecanismo">
-              <Input
-                value={form.mechanism}
-                onChange={(e) => set("mechanism", e.target.value)}
-                placeholder="Produção artesanal exclusiva"
-              />
-            </Field>
-
-            <Field label="Público-alvo">
-              <Textarea
-                value={form.targetAudience}
-                onChange={(e) => set("targetAudience", e.target.value)}
-                placeholder="Mulheres 25-45, classe C/B"
-                rows={2}
-              />
-            </Field>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Ticket (R$)" error={fieldError("ticketPrice")}>
-                <Input
-                  value={form.ticketPrice}
-                  onChange={(e) => set("ticketPrice", e.target.value)}
-                  placeholder="39,90"
-                  inputMode="decimal"
-                />
+              <Field label="Status">
+                <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {OFFER_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {OFFER_STATUS_LABELS[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Responsável">
                 <Select
@@ -290,80 +262,134 @@ export function OfferFormSheet({
               </Field>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Status">
-                <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OFFER_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {OFFER_STATUS_LABELS[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <Field label="Saúde">
-                <Select value={form.health} onValueChange={(v) => set("health", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OFFER_HEALTHS.map((h) => (
-                      <SelectItem key={h} value={h}>
-                        {OFFER_HEALTH_LABELS[h]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <Field label="Prioridade">
-                <Select
-                  value={form.priority}
-                  onValueChange={(v) => set("priority", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRIORITIES.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {PRIORITY_LABELS[p]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-[1fr_auto] gap-3">
-              <Field label="Próxima ação">
-                <Input
-                  value={form.nextAction}
-                  onChange={(e) => set("nextAction", e.target.value)}
-                  placeholder="Editar 4 vídeos do ângulo luxo"
+            {/* Inteligencia estrategica: preenchida depois, sem bloquear */}
+            <Collapsible open={showMore} onOpenChange={setShowMore}>
+              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 transition-transform",
+                    showMore && "rotate-180"
+                  )}
                 />
-              </Field>
-              <Field label="Prazo">
-                <Input
-                  type="date"
-                  value={form.nextActionDue}
-                  onChange={(e) => set("nextActionDue", e.target.value)}
-                />
-              </Field>
-            </div>
+                Mais detalhes (promessa, ticket, público...)
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-3">
+                <Field label="Promessa principal">
+                  <Textarea
+                    value={form.mainPromise}
+                    onChange={(e) => set("mainPromise", e.target.value)}
+                    placeholder="Bolsa artesanal de luxo por menos de R$50"
+                    rows={2}
+                  />
+                </Field>
 
-            <Field label="Observações">
-              <Textarea
-                value={form.notes}
-                onChange={(e) => set("notes", e.target.value)}
-                rows={3}
-              />
-            </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Ticket (R$)" error={fieldError("ticketPrice")}>
+                    <Input
+                      value={form.ticketPrice}
+                      onChange={(e) => set("ticketPrice", e.target.value)}
+                      placeholder="39,90"
+                      inputMode="decimal"
+                    />
+                  </Field>
+                  <Field label="Mecanismo">
+                    <Input
+                      value={form.mechanism}
+                      onChange={(e) => set("mechanism", e.target.value)}
+                      placeholder="Produção artesanal"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Público-alvo">
+                  <Textarea
+                    value={form.targetAudience}
+                    onChange={(e) => set("targetAudience", e.target.value)}
+                    placeholder="Mulheres 25-45, classe C/B"
+                    rows={2}
+                  />
+                </Field>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Nicho">
+                    <Input
+                      value={form.niche}
+                      onChange={(e) => set("niche", e.target.value)}
+                      placeholder="moda feminina"
+                    />
+                  </Field>
+                  <Field label="Sub-nicho">
+                    <Input
+                      value={form.subNiche}
+                      onChange={(e) => set("subNiche", e.target.value)}
+                      placeholder="acessórios"
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Saúde">
+                    <Select
+                      value={form.health}
+                      onValueChange={(v) => set("health", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OFFER_HEALTHS.map((h) => (
+                          <SelectItem key={h} value={h}>
+                            {OFFER_HEALTH_LABELS[h]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Prioridade">
+                    <Select
+                      value={form.priority}
+                      onValueChange={(v) => set("priority", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRIORITIES.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {PRIORITY_LABELS[p]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-[1fr_auto] gap-3">
+                  <Field label="Próxima ação">
+                    <Input
+                      value={form.nextAction}
+                      onChange={(e) => set("nextAction", e.target.value)}
+                      placeholder="Editar 4 vídeos do ângulo luxo"
+                    />
+                  </Field>
+                  <Field label="Prazo">
+                    <Input
+                      type="date"
+                      value={form.nextActionDue}
+                      onChange={(e) => set("nextActionDue", e.target.value)}
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Observações">
+                  <Textarea
+                    value={form.notes}
+                    onChange={(e) => set("notes", e.target.value)}
+                    rows={3}
+                  />
+                </Field>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <SheetFooter className="flex-row justify-end gap-2 border-t border-border/60 px-5 py-3">

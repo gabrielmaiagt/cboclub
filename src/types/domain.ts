@@ -500,6 +500,58 @@ export interface Creative extends AuditFields {
   launchedAt: string | null;
 }
 
+// ── Referencias externas (swipe file) ───────────────────────────────
+export const REFERENCE_STATUSES = [
+  "salvo",
+  "modelar",
+  "modelado",
+  "descartado",
+] as const;
+export type ReferenceStatus = (typeof REFERENCE_STATUSES)[number];
+
+/**
+ * Criativo de REFERENCIA: anuncio de terceiros salvo para modelar.
+ * Nunca se mistura com `creatives` (nossos ativos internos).
+ * A transcricao original NUNCA e sobrescrita pela nossa versao — a
+ * modelagem vira um Script novo com sourceReferenceId apontando pra ca.
+ */
+export interface CreativeReference extends AuditFields {
+  id: string;
+  code: string; // REF-CR-0001
+  url: string | null;
+  storagePath: string | null;
+  /** Texto exatamente como veio do anuncio externo. Imutavel na pratica. */
+  transcription: string | null;
+  /** Anotacao rapida: por que salvei isso? */
+  whySaved: string | null;
+  /** Analise aprofundada, opcional, feita depois. */
+  analysis: string | null;
+  miningItemId: string | null;
+  status: ReferenceStatus;
+  // Metadados opcionais, adicionados depois sem bloquear o fluxo
+  advertiser: string | null;
+  format: string | null;
+  source: string | null; // Biblioteca Meta, TikTok, spy...
+  notes: string | null;
+}
+
+/** Oferta minerada — banco de ofertas de terceiros (§13). */
+export interface MiningItem extends AuditFields {
+  id: string;
+  code: string; // MIN-0001
+  name: string;
+  url: string | null;
+  whyInteresting: string | null;
+  status: MiningStatus;
+  niche: string | null;
+  promise: string | null;
+  mechanism: string | null;
+  price: number | null;
+  advertiser: string | null;
+  notes: string | null;
+  convertedOfferId: string | null;
+}
+
 /** Conteudo de uma versao de copy. Imutavel depois de criado (§20). */
 export interface ScriptVersionData {
   version: number;
@@ -529,6 +581,17 @@ export interface Script extends AuditFields {
   responsibleId: string | null;
   notes: string | null;
   current: ScriptVersionData;
+  // ── Briefing de producao (§4) — tudo opcional ─────────────────────
+  /** Formato sugerido ao editor (slug da taxonomia). */
+  suggestedFormat: string | null;
+  /** Instrucoes de edicao para o editor. */
+  editingInstructions: string | null;
+  /** Links de referencia, um por linha. */
+  referenceLinks: string | null;
+  /** Prazo de producao (YYYY-MM-DD). */
+  deadline: string | null;
+  /** Referencia externa que originou esta copy (modelagem, §12). */
+  sourceReferenceId: string | null;
 }
 
 // ── Entrada de escrita ──────────────────────────────────────────────

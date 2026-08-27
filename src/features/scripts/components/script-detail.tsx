@@ -207,6 +207,50 @@ export function ScriptDetail({
         )}
       </div>
 
+      {/* ── Briefing de producao (§4): o que o editor precisa saber ── */}
+      {(script.editingInstructions ||
+        script.suggestedFormat ||
+        script.deadline ||
+        script.referenceLinks) && (
+        <div className="rounded-lg border border-status-warn/30 bg-status-warn/5 p-4">
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-status-warn">
+            Briefing de produção
+          </p>
+          <div className="space-y-1.5 text-sm">
+            {script.suggestedFormat && (
+              <p>
+                <span className="text-muted-foreground">Formato sugerido:</span>{" "}
+                {script.suggestedFormat}
+              </p>
+            )}
+            {script.deadline && (
+              <p>
+                <span className="text-muted-foreground">Prazo:</span>{" "}
+                {script.deadline.split("-").reverse().join("/")}
+              </p>
+            )}
+            {script.editingInstructions && (
+              <p className="whitespace-pre-wrap">{script.editingInstructions}</p>
+            )}
+            {script.referenceLinks && (
+              <div className="space-y-0.5">
+                {script.referenceLinks.split("\n").filter(Boolean).map((link) => (
+                  <a
+                    key={link}
+                    href={link.trim()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block truncate text-xs text-muted-foreground underline decoration-border hover:text-foreground"
+                  >
+                    {link.trim()}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {/* ── Seletor de versoes ──────────────────────────────── */}

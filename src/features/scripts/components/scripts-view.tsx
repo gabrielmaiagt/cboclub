@@ -38,11 +38,13 @@ export function ScriptsView({
   offers,
   users,
   role,
+  formats = [],
 }: {
   rows: ScriptRow[];
   offers: OfferOption[];
   users: UserOption[];
   role: AppRole;
+  formats?: { slug: string; name: string }[];
 }) {
   const [offerFilter, setOfferFilter] = useState<string>(ALL);
   const [formOpen, setFormOpen] = useState(false);
@@ -159,6 +161,7 @@ export function ScriptsView({
         onOpenChange={setFormOpen}
         offers={offers}
         users={users}
+        formats={formats}
       />
     </div>
   );

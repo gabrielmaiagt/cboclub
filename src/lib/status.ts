@@ -10,6 +10,7 @@ import type {
   OfferHealth,
   OfferStatus,
   Priority,
+  ReferenceStatus,
   ScriptStatus,
   TaskStatus,
 } from "@/types/domain";
@@ -142,6 +143,35 @@ export const CREATIVE_KANBAN_COLUMNS: CreativeStatus[] = [
   "perdedor",
   "arquivado",
 ];
+
+/**
+ * Colunas SEMPRE visiveis no Kanban. As demais (modelar, copy,
+ * pronto_para_teste, perdedor, arquivado) so aparecem quando tem card —
+ * granularidade preservada no banco, interface leve (principio global).
+ */
+export const CREATIVE_KANBAN_CORE: CreativeStatus[] = [
+  "ideia",
+  "aguardando_edicao",
+  "editando",
+  "revisao",
+  "aprovado",
+  "testando",
+  "vencedor",
+];
+
+export const REFERENCE_STATUS_TONE: Record<ReferenceStatus, StatusTone> = {
+  salvo: "neutral",
+  modelar: "warn",
+  modelado: "win",
+  descartado: "dead",
+};
+
+export const REFERENCE_STATUS_LABELS: Record<ReferenceStatus, string> = {
+  salvo: "Salvo",
+  modelar: "Quero modelar",
+  modelado: "Modelado",
+  descartado: "Descartado",
+};
 
 export const MINING_STATUS_TONE: Record<MiningStatus, StatusTone> = {
   encontrada: "neutral",

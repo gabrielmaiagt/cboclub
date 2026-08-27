@@ -32,7 +32,15 @@ export const creativeFormSchema = z.object({
     .min(1)
     .nullable()
     .default(null),
-  title: z.string().trim().min(2, "Título é obrigatório").max(160),
+  // Titulo OPCIONAL (quick capture §7): vazio -> servidor herda da copy
+  // vinculada ou usa "Sem título"
+  title: z
+    .string()
+    .trim()
+    .max(160)
+    .optional()
+    .transform((v) => (v && v.length ? v : null))
+    .nullable(),
   hook: optionalText,
   format: z.string().trim().nullable().default(null),
   platform: z.enum(TRAFFIC_PLATFORMS).default("meta"),
