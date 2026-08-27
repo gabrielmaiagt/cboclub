@@ -5,6 +5,7 @@ import { AlertTriangle, CircleAlert, Smartphone } from "lucide-react";
 
 import { EntityCode } from "@/components/shared/entity-code";
 import { PageHeader } from "@/components/shared/page-header";
+import { PeriodSelector } from "@/components/shared/period-selector";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
   EMPTY,
@@ -15,6 +16,7 @@ import {
   signedPercent,
 } from "@/lib/format";
 import { delta } from "@/lib/metrics";
+import { PERIOD_COMPARISON_LABELS, PERIOD_LABELS } from "@/lib/period";
 import { OFFER_STATUS_TONE } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { OFFER_STATUS_LABELS } from "@/types/domain";
@@ -31,10 +33,12 @@ function StatCard({
   label,
   value,
   deltaValue,
+  comparisonLabel,
 }: {
   label: string;
   value: string;
   deltaValue?: number | null;
+  comparisonLabel: string;
 }) {
   return (
     <div className="rounded-lg border border-border/60 bg-card/40 px-4 py-3">
@@ -49,7 +53,7 @@ function StatCard({
             deltaValue === 0 && "text-muted-foreground"
           )}
         >
-          {signedPercent(deltaValue)} vs. ontem
+          {signedPercent(deltaValue)} {comparisonLabel}
         </p>
       )}
     </div>
@@ -62,8 +66,9 @@ export function DashboardView({
   canSeeFinance,
   offerCount,
 }: DashboardViewProps) {
-  const { todayCard, running, launchQueue, chipCapacity, chipsTarget, decisions, myTasks, alerts } = data;
+  const { period, todayCard, running, launchQueue, chipCapacity, chipsTarget, decisions, myTasks, alerts } = data;
   const y = todayCard.yesterday;
+  const comparisonLabel = PERIOD_COMPARISON_LABELS[period];
 
   return (
     <div className="space-y-6">
@@ -72,19 +77,26 @@ export function DashboardView({
         description={`${offerCount} ${offerCount === 1 ? "oferta" : "ofertas"} no sistema · ${running.length} rodando agora`}
       />
 
-      {/* ── Hoje ────────────────────────────────────────────────── */}
+      {/* ── Periodo selecionado ─────────────────────────────────── */}
       <div>
-        <h2 className="mb-2.5 text-sm font-semibold text-muted-foreground">Hoje</h2>
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            {PERIOD_LABELS[period]}
+          </h2>
+          <PeriodSelector value={period} basePath="/" />
+        </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard
             label="Gasto"
             value={money(todayCard.today.spend)}
             deltaValue={y ? delta(todayCard.today.spend, y.spend) : null}
+            comparisonLabel={comparisonLabel}
           />
           <StatCard
             label="Receita"
             value={money(todayCard.today.revenue)}
             deltaValue={y ? delta(todayCard.today.revenue, y.revenue) : null}
+            comparisonLabel={comparisonLabel}
           />
           <StatCard
             label="Lucro"
@@ -92,14 +104,24 @@ export function DashboardView({
             deltaValue={
               y ? delta(todayCard.today.operationalProfit, y.operationalProfit) : null
             }
+            comparisonLabel={comparisonLabel}
           />
-          <StatCard label="ROAS" value={multiplier(todayCard.today.roas)} />
+          <StatCard
+            label="ROAS"
+            value={multiplier(todayCard.today.roas)}
+            comparisonLabel={comparisonLabel}
+          />
           <StatCard
             label="Vendas"
             value={String(todayCard.today.sales)}
             deltaValue={y ? delta(todayCard.today.sales, y.sales) : null}
+            comparisonLabel={comparisonLabel}
           />
-          <StatCard label="CPA" value={money(todayCard.today.cpa)} />
+          <StatCard
+            label="CPA"
+            value={money(todayCard.today.cpa)}
+            comparisonLabel={comparisonLabel}
+          />
         </div>
       </div>
 

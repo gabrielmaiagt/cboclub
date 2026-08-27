@@ -1,4 +1,5 @@
 import type { DerivedMetrics } from "@/lib/metrics";
+import type { Period } from "@/lib/period";
 import type { ChipStatus, Decision, Offer, Task } from "@/types/domain";
 
 export interface TodayCard {
@@ -19,6 +20,7 @@ export interface Alert {
 }
 
 export interface DashboardData {
+  period: Period;
   todayCard: TodayCard;
   running: RunningOfferRow[];
   launchQueue: Offer[];

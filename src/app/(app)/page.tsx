@@ -1,44 +1,60 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { canRead } from "@/lib/auth/permissions";
-import { businessDate, shiftDate } from "@/lib/format";
+import { businessDate } from "@/lib/format";
 import { deriveFrom } from "@/lib/metrics";
+import { parsePeriod, periodRange, previousPeriodRange } from "@/lib/period";
 import { DashboardView } from "@/features/dashboard/components/dashboard-view";
 import type { DashboardData, RunningOfferRow } from "@/features/dashboard/types";
 import { getChipCapacity } from "@/services/firestore/chips.repo";
 import { getCashSummary } from "@/services/firestore/finance.repo";
 import { listLaunchQueue, listOffers } from "@/services/firestore/offers.repo";
 import { listDecisions, listTasks } from "@/services/firestore/tasks.repo";
-import { groupByOffer, listMetricsByDate } from "@/services/firestore/metrics.repo";
+import {
+  groupByOffer,
+  listMetricsByDate,
+  listMetricsByDateRange,
+} from "@/services/firestore/metrics.repo";
 import { getAppSettings } from "@/services/firestore/settings.repo";
 import { OFFER_LIVE_STATUSES } from "@/types/domain";
 
 export const metadata = { title: "Visão Geral" };
 export const dynamic = "force-dynamic";
 
+interface PageProps {
+  searchParams: Promise<{ period?: string }>;
+}
+
 /**
  * Dashboard (§9-§12, §19).
  *
- * So o que ajuda decisao agora: gasto/receita/lucro/ROAS de hoje com
- * comparacao com ontem, ofertas rodando, fila de lancamento, capacidade
- * de chips e alertas simples calculados na aplicacao — nada de IA.
+ * Gasto/receita/lucro/ROAS do periodo escolhido (Hoje/Ontem/7 dias/Este
+ * mes/Total, via §period) com comparacao vs. o periodo equivalente
+ * anterior, ofertas rodando (sempre "hoje" — e o que esta acontecendo
+ * agora), fila de lancamento, capacidade de chips e alertas simples
+ * calculados na aplicacao — nada de IA.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: PageProps) {
   const ctx = await requireAuth();
+  const { period: rawPeriod } = await searchParams;
+  const period = parsePeriod(rawPeriod);
   const today = businessDate();
-  const yesterday = shiftDate(today, -1);
+  const range = periodRange(period, today);
+  const prevRange = previousPeriodRange(period, today);
 
   const [
     offers,
+    periodMetrics,
+    prevMetrics,
     todayMetrics,
-    yesterdayMetrics,
     launchQueue,
     decisions,
     myTasks,
     settings,
   ] = await Promise.all([
     listOffers(),
+    listMetricsByDateRange(range.from, range.to),
+    prevRange ? listMetricsByDateRange(prevRange.from, prevRange.to) : Promise.resolve([]),
     listMetricsByDate(today),
-    listMetricsByDate(yesterday),
     listLaunchQueue(8),
     listDecisions({ status: "aberta" }),
     listTasks({ responsibleId: ctx.uid }),
@@ -51,13 +67,14 @@ export default async function DashboardPage() {
     canSeeFinance ? getCashSummary() : Promise.resolve(null),
   ]);
 
-  const todayByOffer = groupByOffer(todayMetrics);
-
   const todayCard = {
-    today: deriveFrom(todayMetrics),
-    yesterday: yesterdayMetrics.length ? deriveFrom(yesterdayMetrics) : null,
+    today: deriveFrom(periodMetrics),
+    yesterday: prevMetrics.length ? deriveFrom(prevMetrics) : null,
   };
 
+  // "Rodando agora" e sempre o dia de hoje — mostra o que esta
+  // acontecendo neste instante, independente do periodo escolhido acima.
+  const todayByOffer = groupByOffer(todayMetrics);
   const liveOffers = offers.filter((o) =>
     (OFFER_LIVE_STATUSES as string[]).includes(o.status)
   );
@@ -116,6 +133,7 @@ export default async function DashboardPage() {
   }
 
   const data: DashboardData = {
+    period,
     todayCard,
     running,
     launchQueue,

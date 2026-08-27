@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { setOfferHealthAction } from "@/app/actions/offers";
 import { EntityCode } from "@/components/shared/entity-code";
+import { PeriodSelector } from "@/components/shared/period-selector";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,8 +37,11 @@ import {
   multiplier,
   percent,
   integer,
+  signedPercent,
 } from "@/lib/format";
+import { delta } from "@/lib/metrics";
 import type { DerivedMetrics } from "@/lib/metrics";
+import { PERIOD_COMPARISON_LABELS, PERIOD_LABELS, type Period } from "@/lib/period";
 import {
   CREATIVE_STATUS_LABELS,
   CREATIVE_STATUS_TONE,
@@ -89,7 +93,9 @@ interface CreativeSummary {
 
 interface OfferDetailProps {
   offer: Offer;
-  lifetime: DerivedMetrics;
+  period: Period;
+  metrics: DerivedMetrics;
+  previousMetrics: DerivedMetrics | null;
   today: DerivedMetrics;
   series: SeriesPoint[];
   activity: ActivityEntry[];
@@ -109,10 +115,14 @@ function Stat({
   label,
   value,
   accent,
+  deltaValue,
+  comparisonLabel,
 }: {
   label: string;
   value: string;
   accent?: "win" | "danger";
+  deltaValue?: number | null;
+  comparisonLabel?: string;
 }) {
   return (
     <div className="rounded-lg border border-border/60 bg-card/40 px-3.5 py-3">
@@ -126,6 +136,18 @@ function Stat({
       >
         {value}
       </p>
+      {deltaValue != null && comparisonLabel && (
+        <p
+          className={cn(
+            "tabular mt-1 text-[11px]",
+            deltaValue > 0 && "text-status-win",
+            deltaValue < 0 && "text-status-danger",
+            deltaValue === 0 && "text-muted-foreground"
+          )}
+        >
+          {signedPercent(deltaValue)} {comparisonLabel}
+        </p>
+      )}
     </div>
   );
 }
@@ -136,7 +158,9 @@ function Stat({
  */
 export function OfferDetail({
   offer,
-  lifetime,
+  period,
+  metrics,
+  previousMetrics,
   today,
   series,
   activity,
@@ -168,11 +192,12 @@ export function OfferDetail({
   }
 
   const profitAccent =
-    lifetime.operationalProfit > 0
+    metrics.operationalProfit > 0
       ? "win"
-      : lifetime.operationalProfit < 0
+      : metrics.operationalProfit < 0
         ? "danger"
         : undefined;
+  const comparisonLabel = PERIOD_COMPARISON_LABELS[period];
 
   // Opcoes para os formularios abertos DENTRO do workspace: so esta oferta
   const offerAsOption = [
@@ -252,21 +277,52 @@ export function OfferDetail({
         )}
       </div>
 
-      {/* ── Indicadores acumulados ──────────────────────────────── */}
+      {/* ── Indicadores do periodo ───────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          {PERIOD_LABELS[period]}
+        </h2>
+        <PeriodSelector value={period} basePath={`/ofertas/${offer.code}`} />
+      </div>
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 lg:grid-cols-9">
-        <Stat label="Investimento" value={money(lifetime.spend)} />
-        <Stat label="Receita" value={money(lifetime.revenue)} />
+        <Stat
+          label="Investimento"
+          value={money(metrics.spend)}
+          deltaValue={previousMetrics ? delta(metrics.spend, previousMetrics.spend) : null}
+          comparisonLabel={comparisonLabel}
+        />
+        <Stat
+          label="Receita"
+          value={money(metrics.revenue)}
+          deltaValue={
+            previousMetrics ? delta(metrics.revenue, previousMetrics.revenue) : null
+          }
+          comparisonLabel={comparisonLabel}
+        />
         <Stat
           label="Lucro"
-          value={money(lifetime.operationalProfit)}
+          value={money(metrics.operationalProfit)}
           accent={profitAccent}
+          deltaValue={
+            previousMetrics
+              ? delta(metrics.operationalProfit, previousMetrics.operationalProfit)
+              : null
+          }
+          comparisonLabel={comparisonLabel}
         />
-        <Stat label="ROAS" value={multiplier(lifetime.roas)} />
-        <Stat label="ROI" value={percent(lifetime.roi)} />
-        <Stat label="Vendas" value={integer(lifetime.sales)} />
-        <Stat label="CPA" value={money(lifetime.cpa)} />
-        <Stat label="Leads" value={integer(lifetime.leads)} />
-        <Stat label="CPL" value={money(lifetime.cpl)} />
+        <Stat label="ROAS" value={multiplier(metrics.roas)} />
+        <Stat label="ROI" value={percent(metrics.roi)} />
+        <Stat
+          label="Vendas"
+          value={integer(metrics.sales)}
+          deltaValue={
+            previousMetrics ? delta(metrics.sales, previousMetrics.sales) : null
+          }
+          comparisonLabel={comparisonLabel}
+        />
+        <Stat label="CPA" value={money(metrics.cpa)} />
+        <Stat label="Leads" value={integer(metrics.leads)} />
+        <Stat label="CPL" value={money(metrics.cpl)} />
       </div>
 
       {/* ── Abas do workspace ───────────────────────────────────── */}

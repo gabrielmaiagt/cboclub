@@ -4,16 +4,13 @@ import { OfferDetail } from "@/features/offers/components/offer-detail";
 import { requireAuth } from "@/lib/auth/guard";
 import { canRead } from "@/lib/auth/permissions";
 import { deriveFrom } from "@/lib/metrics";
-import { derive } from "@/lib/metrics";
+import { parsePeriod, periodRange, previousPeriodRange } from "@/lib/period";
 import { listActivityByOffer } from "@/services/firestore/activity.repo";
 import { listChips } from "@/services/firestore/chips.repo";
 import { listCreatives } from "@/services/firestore/creatives.repo";
 import { listExperiments } from "@/services/firestore/experiments.repo";
 import { listLedger } from "@/services/firestore/finance.repo";
-import {
-  aggregateOfferTotals,
-  listMetricsByOffer,
-} from "@/services/firestore/metrics.repo";
+import { listMetricsByOffer } from "@/services/firestore/metrics.repo";
 import { getOfferByCode } from "@/services/firestore/offers.repo";
 import { listScripts } from "@/services/firestore/scripts.repo";
 import { getTaxonomy } from "@/services/firestore/settings.repo";
@@ -24,6 +21,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ period?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -34,18 +32,23 @@ export async function generateMetadata({ params }: PageProps) {
 /**
  * Workspace da oferta (§7): tudo daquela oferta, nada de outras.
  */
-export default async function OfferDetailPage({ params }: PageProps) {
+export default async function OfferDetailPage({ params, searchParams }: PageProps) {
   const ctx = await requireAuth();
   const { code } = await params;
+  const { period: rawPeriod } = await searchParams;
+  const period = parsePeriod(rawPeriod);
 
   const offer = await getOfferByCode(code);
   if (!offer) notFound();
 
   const today = businessDate();
   const canSeeFinance = canRead(ctx.role, "expenses");
+  const range = periodRange(period, today);
+  const prevRange = previousPeriodRange(period, today);
 
   const [
-    totals,
+    periodMetrics,
+    prevMetrics,
     series,
     activity,
     users,
@@ -56,7 +59,8 @@ export default async function OfferDetailPage({ params }: PageProps) {
     allChips,
     ledger,
   ] = await Promise.all([
-    aggregateOfferTotals(offer.id),
+    listMetricsByOffer(offer.id, range),
+    prevRange ? listMetricsByOffer(offer.id, prevRange) : Promise.resolve([]),
     listMetricsByOffer(offer.id, { from: shiftDate(today, -29), to: today }),
     listActivityByOffer(offer.id),
     listUsers(),
@@ -68,18 +72,8 @@ export default async function OfferDetailPage({ params }: PageProps) {
     canSeeFinance ? listLedger({ offerId: offer.id }) : Promise.resolve([]),
   ]);
 
-  const lifetime = derive({
-    spend: totals.spend,
-    impressions: totals.impressions,
-    clicks: totals.clicks,
-    leads: totals.leads,
-    sales: totals.sales,
-    revenue: totals.revenue,
-    refunds: totals.refunds,
-    gatewayFees: totals.gatewayFees,
-    additionalCosts: totals.additionalCosts,
-  });
-
+  const metrics = deriveFrom(periodMetrics);
+  const previousMetrics = prevMetrics.length ? deriveFrom(prevMetrics) : null;
   const todayDerived = deriveFrom(series.filter((m) => m.date === today));
   const chipsLinked = allChips.filter((c) => c.currentOfferId === offer.id);
   const chipsAvailable = allChips.filter(
@@ -89,7 +83,9 @@ export default async function OfferDetailPage({ params }: PageProps) {
   return (
     <OfferDetail
       offer={offer}
-      lifetime={lifetime}
+      period={period}
+      metrics={metrics}
+      previousMetrics={previousMetrics}
       today={todayDerived}
       series={series.map((m) => ({
         date: m.date,
