@@ -44,6 +44,15 @@ function createAdminApp(): App {
     process.env.FIREBASE_PROJECT_ID ??
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
+  // Falhar alto: sem projectId o emulador aceita a escrita num namespace
+  // "fantasma" de outro projeto e os dados somem da visao da aplicacao.
+  if (!projectId) {
+    throw new Error(
+      "FIREBASE_PROJECT_ID/NEXT_PUBLIC_FIREBASE_PROJECT_ID nao definido — " +
+        "recuso a inicializar o Admin SDK sem projeto explicito."
+    );
+  }
+
   return initializeApp(
     credential ? { credential, projectId } : { projectId },
     ADMIN_APP_NAME
@@ -62,12 +71,19 @@ export function adminAuth(): Auth {
   return getAuth(adminApp());
 }
 
-let firestoreInstance: Firestore | undefined;
+// Cache em globalThis: um modulo recarregado pelo HMR perde variaveis
+// locais, mas a instancia do Firestore sobrevive no app singleton — e
+// settings() so pode ser chamado uma vez por instancia.
+declare global {
+  // eslint-disable-next-line no-var
+  var __adminFirestore: Firestore | undefined;
+}
 
 export function adminDb(): Firestore {
-  if (!firestoreInstance) {
-    firestoreInstance = getFirestore(adminApp());
-    firestoreInstance.settings({ ignoreUndefinedProperties: true });
+  if (!globalThis.__adminFirestore) {
+    const instance = getFirestore(adminApp());
+    instance.settings({ ignoreUndefinedProperties: true });
+    globalThis.__adminFirestore = instance;
   }
-  return firestoreInstance;
+  return globalThis.__adminFirestore;
 }
