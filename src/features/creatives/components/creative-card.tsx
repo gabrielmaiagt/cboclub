@@ -1,6 +1,6 @@
 "use client";
 
-import { Clapperboard, Link2, User } from "lucide-react";
+import { Link2, User } from "lucide-react";
 
 import { EntityCode } from "@/components/shared/entity-code";
 import type { CreativeRow } from "@/features/creatives/types";
@@ -8,75 +8,55 @@ import { duration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
- * Card de criativo — usado no Kanban e no grid.
- * Denso de proposito: o editor varre dezenas por dia.
+ * Card de criativo.
+ *
+ * A OFERTA e a primeira coisa que se le (sistema orientado por oferta):
+ * chip no topo do card, antes do titulo.
  */
 export function CreativeCard({
   row,
   dragging,
+  subStatus,
 }: {
   row: CreativeRow;
   dragging?: boolean;
+  /** Sub-status fino, mostrado quando a coluna agrupa varios estados. */
+  subStatus?: string | null;
 }) {
-  const { creative, offerCode, angleName, editorName, scriptCode } = row;
+  const { creative, offerName, offerCode, editorName, scriptCode } = row;
 
   return (
     <div
       className={cn(
-        "rounded-md border border-border/60 bg-card p-2.5 shadow-sm",
+        "rounded-lg border border-border/60 bg-card p-3 shadow-sm transition-colors hover:border-border",
         dragging && "opacity-40"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium leading-tight">
-            {creative.title}
-          </p>
-          <div className="mt-0.5 flex items-center gap-1.5">
-            <EntityCode code={creative.code} />
-            <span className="text-[10px] text-muted-foreground/60">
-              {offerCode}
-            </span>
-          </div>
-        </div>
-        {creative.format && (
-          <span className="shrink-0 rounded border border-border/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-            {creative.format}
+      {/* Oferta em primeiro lugar */}
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="truncate rounded bg-accent/70 px-1.5 py-0.5 text-[11px] font-medium text-accent-foreground">
+          {offerCode !== "—" ? `${offerCode} · ${offerName}` : offerName}
+        </span>
+        {subStatus && (
+          <span className="shrink-0 text-[11px] text-muted-foreground">
+            {subStatus}
           </span>
         )}
       </div>
 
+      <p className="truncate text-sm font-medium leading-snug">
+        {creative.title}
+      </p>
+      <EntityCode code={creative.code} className="mt-0.5 block" />
+
       {creative.hook && (
-        <p className="mt-1.5 line-clamp-2 text-[11px] text-muted-foreground">
+        <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
           “{creative.hook}”
         </p>
       )}
 
-      {creative.tags.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {creative.tags.slice(0, 4).map((tag) => (
-            <span
-              key={tag}
-              className="rounded bg-accent/60 px-1 py-px text-[10px] text-muted-foreground"
-            >
-              {tag}
-            </span>
-          ))}
-          {creative.tags.length > 4 && (
-            <span className="text-[10px] text-muted-foreground/50">
-              +{creative.tags.length - 4}
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="mt-2 flex items-center gap-2.5 text-[10px] text-muted-foreground/70">
-        {angleName && (
-          <span className="flex items-center gap-1">
-            <Clapperboard className="size-3" />
-            {angleName}
-          </span>
-        )}
+      <div className="mt-2.5 flex items-center gap-2.5 text-[11px] text-muted-foreground">
+        {creative.format && <span>{creative.format}</span>}
         {scriptCode && (
           <span className="flex items-center gap-1">
             <Link2 className="size-3" />

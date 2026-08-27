@@ -58,6 +58,8 @@ interface CreativeFormSheetProps {
   scripts: ScriptOption[];
   users: UserOption[];
   taxonomy: Taxonomy;
+  /** Workspace da oferta: pre-seleciona e trava a oferta. */
+  lockedOfferId?: string;
 }
 
 const NONE = "__none__";
@@ -137,6 +139,7 @@ export function CreativeFormSheet({
   scripts,
   users,
   taxonomy,
+  lockedOfferId,
 }: CreativeFormSheetProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -148,10 +151,12 @@ export function CreativeFormSheet({
 
   useEffect(() => {
     if (!open) return;
-    setForm(creative ? fromCreative(creative) : emptyState());
+    const base = creative ? fromCreative(creative) : emptyState();
+    if (!creative && lockedOfferId) base.offerId = lockedOfferId;
+    setForm(base);
     setErrors({});
     setShowMore(mode === "edit");
-  }, [open, creative, mode]);
+  }, [open, creative, mode, lockedOfferId]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -283,6 +288,7 @@ export function CreativeFormSheet({
             <Field label="Oferta" error={fieldError("offerId")} required>
               <Select
                 value={form.offerId || undefined}
+                disabled={!!lockedOfferId}
                 onValueChange={(v) => {
                   set("offerId", v);
                   // Angulo e copy pertencem a oferta: reset ao trocar

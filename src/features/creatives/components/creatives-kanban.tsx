@@ -19,30 +19,45 @@ import { toast } from "sonner";
 import { changeCreativeStatusAction } from "@/app/actions/creatives";
 import { CreativeCard } from "@/features/creatives/components/creative-card";
 import type { CreativeRow } from "@/features/creatives/types";
-import { EMPTY } from "@/lib/format";
 import {
-  CREATIVE_KANBAN_COLUMNS,
-  CREATIVE_KANBAN_CORE,
+  CREATIVE_BOARD_HIDDEN,
+  CREATIVE_STAGES,
   CREATIVE_STATUS_LABELS,
-  CREATIVE_STATUS_TONE,
   TONE_DOT,
+  type CreativeStage,
 } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { CreativeStatus } from "@/types/domain";
 
+/**
+ * Quadro de producao de criativos.
+ *
+ * 6 macroetapas em vez de 12 colunas: legivel em segundos por alguem
+ * novo na operacao. O sub-status fino continua no banco — aparece como
+ * selo no card quando a etapa agrupa mais de um estado.
+ */
+
 function DraggableCard({
   row,
   editable,
+  showSubStatus,
 }: {
   row: CreativeRow;
   editable: boolean;
+  showSubStatus: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: row.creative.id,
     disabled: !editable,
   });
 
-  const card = <CreativeCard row={row} dragging={isDragging} />;
+  const card = (
+    <CreativeCard
+      row={row}
+      dragging={isDragging}
+      subStatus={showSubStatus ? CREATIVE_STATUS_LABELS[row.creative.status] : null}
+    />
+  );
 
   if (!editable) {
     return <Link href={`/criativos/${row.creative.code}`}>{card}</Link>;
@@ -62,55 +77,108 @@ function DraggableCard({
   );
 }
 
-function Column({
-  status,
-  rows,
-  editable,
+/** Zona de soltura simples (uma por etapa, exceto Resultado). */
+function DropZone({
+  id,
+  children,
+  className,
 }: {
-  status: CreativeStatus;
-  rows: CreativeRow[];
-  editable: boolean;
+  id: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
-
+  const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div className="flex w-64 shrink-0 flex-col">
-      <div className="mb-2 flex items-center gap-2 px-0.5">
-        <span
-          className={cn(
-            "size-1.5 rounded-full",
-            TONE_DOT[CREATIVE_STATUS_TONE[status]]
-          )}
-        />
-        <p className="text-xs font-medium">{CREATIVE_STATUS_LABELS[status]}</p>
-        <span className="text-xs text-muted-foreground/60">{rows.length}</span>
-      </div>
-
-      <div
-        ref={setNodeRef}
-        className={cn(
-          "thin-scroll flex min-h-32 flex-1 flex-col gap-2 overflow-y-auto rounded-lg border border-transparent p-1 transition-colors",
-          isOver && "border-dashed border-foreground/25 bg-accent/30"
-        )}
-      >
-        {rows.map((row) => (
-          <DraggableCard key={row.creative.id} row={row} editable={editable} />
-        ))}
-        {!rows.length && (
-          <p className="px-1 py-3 text-[11px] text-muted-foreground/40">
-            {EMPTY}
-          </p>
-        )}
-      </div>
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "flex flex-col gap-2 rounded-lg border border-transparent p-1.5 transition-colors",
+        isOver && "border-dashed border-foreground/30 bg-accent/40",
+        className
+      )}
+    >
+      {children}
     </div>
   );
 }
 
-/**
- * Kanban de criativos (§15). Mesma mecanica do Kanban de ofertas:
- * arrastar muda o status via server action, com atualizacao otimista e
- * rollback se o servidor recusar.
- */
+function StageColumn({
+  stage,
+  rows,
+  editable,
+}: {
+  stage: CreativeStage;
+  rows: CreativeRow[];
+  editable: boolean;
+}) {
+  const grouped = stage.statuses.length > 1;
+
+  return (
+    <div className="flex w-72 shrink-0 flex-col">
+      <div className="mb-2.5 flex items-center gap-2 px-1">
+        <span className={cn("size-2 rounded-full", TONE_DOT[stage.tone])} />
+        <p className="text-sm font-medium">{stage.label}</p>
+        <span className="text-sm text-muted-foreground">{rows.length}</span>
+      </div>
+
+      {stage.dropStatus !== null ? (
+        <DropZone
+          id={`stage:${stage.dropStatus}`}
+          className="thin-scroll min-h-36 flex-1 overflow-y-auto"
+        >
+          {rows.map((row) => (
+            <DraggableCard
+              key={row.creative.id}
+              row={row}
+              editable={editable}
+              showSubStatus={grouped}
+            />
+          ))}
+          {!rows.length && (
+            <p className="px-1.5 py-4 text-xs text-muted-foreground/60">
+              Arraste um card para cá
+            </p>
+          )}
+        </DropZone>
+      ) : (
+        /* Resultado: nao existe default seguro entre ganhar e perder,
+           entao cada um tem a sua zona de soltura. */
+        <div className="flex min-h-36 flex-1 flex-col gap-2">
+          {stage.statuses.map((status) => {
+            const statusRows = rows.filter((r) => r.creative.status === status);
+            return (
+              <DropZone
+                key={status}
+                id={`stage:${status}`}
+                className="flex-1 bg-card/20"
+              >
+                <p
+                  className={cn(
+                    "px-1 text-xs font-medium",
+                    status === "vencedor"
+                      ? "text-status-win"
+                      : "text-status-danger"
+                  )}
+                >
+                  {CREATIVE_STATUS_LABELS[status]} · {statusRows.length}
+                </p>
+                {statusRows.map((row) => (
+                  <DraggableCard
+                    key={row.creative.id}
+                    row={row}
+                    editable={editable}
+                    showSubStatus={false}
+                  />
+                ))}
+              </DropZone>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CreativesKanban({
   rows,
   editable,
@@ -130,40 +198,35 @@ export function CreativesKanban({
 
   const effective = useMemo(
     () =>
-      rows.map((row) =>
-        optimistic[row.creative.id]
-          ? {
-              ...row,
-              creative: {
-                ...row.creative,
-                status: optimistic[row.creative.id],
-              },
-            }
-          : row
-      ),
+      rows
+        .map((row) =>
+          optimistic[row.creative.id]
+            ? {
+                ...row,
+                creative: {
+                  ...row.creative,
+                  status: optimistic[row.creative.id],
+                },
+              }
+            : row
+        )
+        .filter(
+          (row) => !CREATIVE_BOARD_HIDDEN.includes(row.creative.status)
+        ),
     [rows, optimistic]
   );
 
-  const byStatus = useMemo(() => {
-    const map = new Map<CreativeStatus, CreativeRow[]>();
-    for (const status of CREATIVE_KANBAN_COLUMNS) map.set(status, []);
-    for (const row of effective) map.get(row.creative.status)?.push(row);
+  const byStage = useMemo(() => {
+    const map = new Map<string, CreativeRow[]>();
+    for (const stage of CREATIVE_STAGES) map.set(stage.key, []);
+    for (const row of effective) {
+      const stage = CREATIVE_STAGES.find((s) =>
+        s.statuses.includes(row.creative.status)
+      );
+      if (stage) map.get(stage.key)?.push(row);
+    }
     return map;
   }, [effective]);
-
-  /**
-   * Interface leve (§7): colunas raras so aparecem quando tem card ou
-   * durante um drag (para poderem receber o drop). A granularidade
-   * completa continua no banco e no menu de status.
-   */
-  const visibleColumns = useMemo(() => {
-    if (activeId) return CREATIVE_KANBAN_COLUMNS;
-    return CREATIVE_KANBAN_COLUMNS.filter(
-      (status) =>
-        (CREATIVE_KANBAN_CORE as CreativeStatus[]).includes(status) ||
-        (byStatus.get(status)?.length ?? 0) > 0
-    );
-  }, [activeId, byStatus]);
 
   const activeRow = effective.find((r) => r.creative.id === activeId) ?? null;
 
@@ -177,7 +240,8 @@ export function CreativesKanban({
     if (!over) return;
 
     const creativeId = String(active.id);
-    const target = String(over.id) as CreativeStatus;
+    // Zonas de soltura carregam o status alvo no proprio id
+    const target = String(over.id).replace("stage:", "") as CreativeStatus;
     const current = effective.find((r) => r.creative.id === creativeId);
     if (!current || current.creative.status === target) return;
 
@@ -207,12 +271,12 @@ export function CreativesKanban({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="thin-scroll flex gap-3 overflow-x-auto pb-4">
-        {visibleColumns.map((status) => (
-          <Column
-            key={status}
-            status={status}
-            rows={byStatus.get(status) ?? []}
+      <div className="thin-scroll flex gap-4 overflow-x-auto pb-4">
+        {CREATIVE_STAGES.map((stage) => (
+          <StageColumn
+            key={stage.key}
+            stage={stage}
+            rows={byStage.get(stage.key) ?? []}
             editable={editable}
           />
         ))}
@@ -220,7 +284,7 @@ export function CreativesKanban({
 
       <DragOverlay>
         {activeRow ? (
-          <div className="w-64 rotate-1">
+          <div className="w-72 rotate-1">
             <CreativeCard row={activeRow} />
           </div>
         ) : null}

@@ -12,6 +12,7 @@ import {
 } from "@/services/firestore/metrics.repo";
 import { getOfferByCode } from "@/services/firestore/offers.repo";
 import { listScripts } from "@/services/firestore/scripts.repo";
+import { getTaxonomy } from "@/services/firestore/settings.repo";
 import { listUsers } from "@/services/firestore/users.repo";
 import { businessDate, shiftDate } from "@/lib/format";
 
@@ -41,7 +42,7 @@ export default async function OfferDetailPage({ params }: PageProps) {
   if (!offer) notFound();
 
   const today = businessDate();
-  const [totals, series, activity, users, scripts, creatives] =
+  const [totals, series, activity, users, scripts, creatives, taxonomy] =
     await Promise.all([
       aggregateOfferTotals(offer.id),
       listMetricsByOffer(offer.id, { from: shiftDate(today, -29), to: today }),
@@ -49,6 +50,7 @@ export default async function OfferDetailPage({ params }: PageProps) {
       listUsers(),
       listScripts({ offerId: offer.id }),
       listCreatives({ offerId: offer.id }),
+      getTaxonomy(),
     ]);
 
   // Totais acumulados: o servidor somou, a aplicacao deriva (§33)
@@ -99,6 +101,7 @@ export default async function OfferDetailPage({ params }: PageProps) {
         format: c.format,
         scriptVersion: c.scriptVersion,
       }))}
+      taxonomy={taxonomy}
     />
   );
 }

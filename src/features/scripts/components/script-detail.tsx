@@ -271,7 +271,7 @@ export function ScriptDetail({
               >
                 V{v.version}
                 {v.version === script.currentVersion && (
-                  <span className="ml-1 text-[10px] text-muted-foreground/60">
+                  <span className="ml-1 text-[11px] text-muted-foreground/60">
                     atual
                   </span>
                 )}

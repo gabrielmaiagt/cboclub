@@ -50,7 +50,7 @@ export function OffersView({ rows, role, users }: OffersViewProps) {
   );
 
   const newOfferButton = editable ? (
-    <Button size="sm" onClick={() => setFormOpen(true)} className="gap-1.5">
+    <Button onClick={() => setFormOpen(true)} className="gap-2">
       <Plus className="size-4" />
       Nova Oferta
     </Button>
@@ -63,32 +63,32 @@ export function OffersView({ rows, role, users }: OffersViewProps) {
         description={`${rows.length} ${rows.length === 1 ? "oferta" : "ofertas"} no sistema.`}
         action={
           <div className="flex items-center gap-2">
-            <div className="flex items-center rounded-md border border-border/60 p-0.5">
+            <div className="flex items-center rounded-lg border border-border/60 p-1">
               <button
                 onClick={() => setMode("table")}
-                title="Tabela"
+                title="Todas as ofertas com os números de hoje"
                 className={cn(
-                  "flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors",
+                  "flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-colors",
                   mode === "table"
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-accent font-medium text-accent-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Table2 className="size-3.5" />
-                Tabela
+                <Table2 className="size-4" />
+                Lista
               </button>
               <button
                 onClick={() => setMode("kanban")}
-                title="Kanban"
+                title="Ofertas por etapa do funil — arraste para mover"
                 className={cn(
-                  "flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors",
+                  "flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-colors",
                   mode === "kanban"
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-accent font-medium text-accent-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <KanbanSquare className="size-3.5" />
-                Kanban
+                <KanbanSquare className="size-4" />
+                Funil
               </button>
             </div>
             {newOfferButton}

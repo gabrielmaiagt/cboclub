@@ -145,19 +145,72 @@ export const CREATIVE_KANBAN_COLUMNS: CreativeStatus[] = [
 ];
 
 /**
- * Colunas SEMPRE visiveis no Kanban. As demais (modelar, copy,
- * pronto_para_teste, perdedor, arquivado) so aparecem quando tem card —
- * granularidade preservada no banco, interface leve (principio global).
+ * MACROETAPAS do quadro de criativos.
+ *
+ * 12 status viram 6 colunas que qualquer pessoa nova entende em
+ * segundos. A granularidade fina continua no banco e no menu de status —
+ * o quadro mostra o sub-status como selo no card quando a coluna agrupa
+ * mais de um. Soltar um card na coluna aplica o `dropStatus`.
+ *
+ * "Resultado" tem duas zonas de soltura (Vencedor / Perdedor): nao
+ * existe default seguro entre ganhar e perder.
  */
-export const CREATIVE_KANBAN_CORE: CreativeStatus[] = [
-  "ideia",
-  "aguardando_edicao",
-  "editando",
-  "revisao",
-  "aprovado",
-  "testando",
-  "vencedor",
+export interface CreativeStage {
+  key: string;
+  label: string;
+  statuses: CreativeStatus[];
+  /** Status aplicado ao soltar um card na coluna (null = usa subzonas). */
+  dropStatus: CreativeStatus | null;
+  tone: StatusTone;
+}
+
+export const CREATIVE_STAGES: CreativeStage[] = [
+  {
+    key: "ideias",
+    label: "Ideias",
+    statuses: ["ideia", "modelar", "copy"],
+    dropStatus: "ideia",
+    tone: "neutral",
+  },
+  {
+    key: "edicao",
+    label: "Em edição",
+    statuses: ["aguardando_edicao", "editando"],
+    dropStatus: "aguardando_edicao",
+    tone: "progress",
+  },
+  {
+    key: "revisao",
+    label: "Revisão",
+    statuses: ["revisao"],
+    dropStatus: "revisao",
+    tone: "warn",
+  },
+  {
+    key: "pronto",
+    label: "Pronto",
+    statuses: ["aprovado", "pronto_para_teste"],
+    dropStatus: "aprovado",
+    tone: "ready",
+  },
+  {
+    key: "no_ar",
+    label: "No ar",
+    statuses: ["testando"],
+    dropStatus: "testando",
+    tone: "live",
+  },
+  {
+    key: "resultado",
+    label: "Resultado",
+    statuses: ["vencedor", "perdedor"],
+    dropStatus: null,
+    tone: "win",
+  },
 ];
+
+/** Arquivados ficam fora do quadro; continuam na galeria e no detalhe. */
+export const CREATIVE_BOARD_HIDDEN: CreativeStatus[] = ["arquivado"];
 
 export const REFERENCE_STATUS_TONE: Record<ReferenceStatus, StatusTone> = {
   salvo: "neutral",

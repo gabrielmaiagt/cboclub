@@ -6,8 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 
+// A variavel NAO pode se chamar --font-sans: colidiria com o token do
+// tema e criaria um ciclo de custom property (fonte cairia no serif).
 const geistSans = Geist({
-  variable: "--font-sans",
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
@@ -31,7 +33,7 @@ export default function RootLayout({
     // Dark mode fixo: ferramenta operacional usada o dia inteiro
     <html lang="pt-BR" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-background font-sans text-foreground antialiased`}
       >
         <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
         <Toaster position="top-right" richColors closeButton />

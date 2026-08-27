@@ -2,19 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Boxes, KanbanSquare, LayoutGrid, Plus } from "lucide-react";
+import { Boxes, Columns3, Package, Plus } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CreativeCard } from "@/features/creatives/components/creative-card";
 import { CreativeFormSheet } from "@/features/creatives/components/creative-form-sheet";
 import { CreativesKanban } from "@/features/creatives/components/creatives-kanban";
@@ -38,8 +31,14 @@ interface CreativesViewProps {
   role: AppRole;
 }
 
-const ALL = "__all__";
-
+/**
+ * Fila de producao da equipe entre todas as ofertas.
+ *
+ * Duas visoes sobre os mesmos dados:
+ *  - "Etapas": quadro de producao (o que esta travado onde?)
+ *  - "Por oferta": agrupado por oferta (o que cada oferta tem?)
+ * O trabalho de UMA oferta especifica vive na pagina da oferta.
+ */
 export function CreativesView({
   rows,
   offers,
@@ -48,74 +47,67 @@ export function CreativesView({
   taxonomy,
   role,
 }: CreativesViewProps) {
-  const [mode, setMode] = useState<"kanban" | "grid">("kanban");
-  const [offerFilter, setOfferFilter] = useState<string>(ALL);
+  const [mode, setMode] = useState<"stages" | "byOffer">("stages");
   const [formOpen, setFormOpen] = useState(false);
 
   const editable = canWrite(role, "creative");
 
-  const filtered = useMemo(
-    () =>
-      offerFilter === ALL
-        ? rows
-        : rows.filter((r) => r.creative.offerId === offerFilter),
-    [rows, offerFilter]
-  );
+  /** Agrupamento por oferta, na ordem das ofertas mais recentes. */
+  const groups = useMemo(() => {
+    const map = new Map<string, CreativeRow[]>();
+    for (const row of rows) {
+      const list = map.get(row.creative.offerId);
+      if (list) list.push(row);
+      else map.set(row.creative.offerId, [row]);
+    }
+    return [...map.entries()].map(([offerId, items]) => ({
+      offerId,
+      offerCode: items[0].offerCode,
+      offerName: items[0].offerName,
+      items,
+    }));
+  }, [rows]);
 
   const newButton = editable ? (
-    <Button size="sm" onClick={() => setFormOpen(true)} className="gap-1.5">
+    <Button onClick={() => setFormOpen(true)} className="gap-2">
       <Plus className="size-4" />
       Novo Criativo
     </Button>
   ) : null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Criativos"
-        description={`${rows.length} ${rows.length === 1 ? "criativo" : "criativos"} no sistema.`}
+        description="Fila de produção da equipe, entre todas as ofertas. Para trabalhar numa oferta específica, abra a página dela."
         action={
           <div className="flex items-center gap-2">
-            <Select value={offerFilter} onValueChange={setOfferFilter}>
-              <SelectTrigger className="h-8 w-52 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todas as ofertas</SelectItem>
-                {offers.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.code} · {o.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center rounded-md border border-border/60 p-0.5">
+            <div className="flex items-center rounded-lg border border-border/60 p-1">
               <button
-                onClick={() => setMode("kanban")}
-                title="Kanban"
+                onClick={() => setMode("stages")}
+                title="Quadro por etapa de produção"
                 className={cn(
-                  "flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors",
-                  mode === "kanban"
-                    ? "bg-accent text-accent-foreground"
+                  "flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-colors",
+                  mode === "stages"
+                    ? "bg-accent font-medium text-accent-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <KanbanSquare className="size-3.5" />
-                Kanban
+                <Columns3 className="size-4" />
+                Etapas
               </button>
               <button
-                onClick={() => setMode("grid")}
-                title="Grid"
+                onClick={() => setMode("byOffer")}
+                title="Agrupado por oferta"
                 className={cn(
-                  "flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors",
-                  mode === "grid"
-                    ? "bg-accent text-accent-foreground"
+                  "flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-colors",
+                  mode === "byOffer"
+                    ? "bg-accent font-medium text-accent-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <LayoutGrid className="size-3.5" />
-                Grid
+                <Package className="size-4" />
+                Por oferta
               </button>
             </div>
             {newButton}
@@ -127,28 +119,48 @@ export function CreativesView({
         <EmptyState
           icon={<Boxes className="size-8" />}
           title="Nenhum criativo ainda"
-          description="Crie o primeiro pedido de criativo e ele aparece no Kanban do editor."
+          description="Crie o primeiro pedido de criativo e ele aparece no quadro do editor."
           action={newButton}
         />
-      ) : mode === "kanban" ? (
-        <CreativesKanban rows={filtered} editable={editable} />
+      ) : mode === "stages" ? (
+        <CreativesKanban rows={rows} editable={editable} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((row) => (
-            <Link
-              key={row.creative.id}
-              href={`/criativos/${row.creative.code}`}
-              className="group"
-            >
-              <div className="space-y-1.5">
-                <CreativeCard row={row} />
-                <StatusBadge
-                  label={CREATIVE_STATUS_LABELS[row.creative.status]}
-                  tone={CREATIVE_STATUS_TONE[row.creative.status]}
-                  className="ml-1"
-                />
+        <div className="space-y-8">
+          {groups.map((group) => (
+            <section key={group.offerId}>
+              <Link
+                href={`/ofertas/${group.offerCode}`}
+                className="group mb-3 flex items-baseline gap-2.5"
+              >
+                <h2 className="text-base font-semibold group-hover:underline">
+                  {group.offerName}
+                </h2>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {group.offerCode}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {group.items.length}{" "}
+                  {group.items.length === 1 ? "criativo" : "criativos"}
+                </span>
+              </Link>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {group.items.map((row) => (
+                  <Link
+                    key={row.creative.id}
+                    href={`/criativos/${row.creative.code}`}
+                  >
+                    <div className="space-y-1.5">
+                      <CreativeCard row={row} />
+                      <StatusBadge
+                        label={CREATIVE_STATUS_LABELS[row.creative.status]}
+                        tone={CREATIVE_STATUS_TONE[row.creative.status]}
+                        className="ml-1"
+                      />
+                    </div>
+                  </Link>
+                ))}
               </div>
-            </Link>
+            </section>
           ))}
         </div>
       )}

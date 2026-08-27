@@ -64,15 +64,22 @@ export function Topbar({ user, quickAdd }: TopbarProps) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar oferta, criativo, chip..."
+          placeholder="Buscar (em breve)"
           disabled
-          className="h-8 w-full rounded-md border border-border/60 bg-background/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-border disabled:cursor-not-allowed disabled:opacity-50"
+          title="A busca global chega junto com os próximos módulos"
+          className="h-10 w-full rounded-lg border border-border/60 bg-background/60 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-ring disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
 
       <div className="ml-auto flex items-center gap-2">
         {quickAdd ?? (
-          <Button size="sm" variant="outline" disabled className="gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled
+            title="O atalho global de criação chega com os próximos módulos"
+            className="gap-1.5"
+          >
             <Plus className="size-4" />
             Adicionar
           </Button>
@@ -84,8 +91,8 @@ export function Topbar({ user, quickAdd }: TopbarProps) {
               className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-accent/50"
               aria-label="Menu do usuário"
             >
-              <Avatar className="size-7">
-                <AvatarFallback className="text-[11px]">
+              <Avatar className="size-8">
+                <AvatarFallback className="text-xs">
                   {initials(user.fullName || user.email || "?")}
                 </AvatarFallback>
               </Avatar>

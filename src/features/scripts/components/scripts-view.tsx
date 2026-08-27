@@ -58,8 +58,24 @@ export function ScriptsView({
     [rows, offerFilter]
   );
 
+  /** Sistema orientado por oferta: a listagem agrupa por oferta. */
+  const groups = useMemo(() => {
+    const map = new Map<string, ScriptRow[]>();
+    for (const row of filtered) {
+      const list = map.get(row.script.offerId);
+      if (list) list.push(row);
+      else map.set(row.script.offerId, [row]);
+    }
+    return [...map.entries()].map(([offerId, items]) => ({
+      offerId,
+      offerCode: items[0].offerCode,
+      offerName: items[0].offerName,
+      items,
+    }));
+  }, [filtered]);
+
   const newButton = editable ? (
-    <Button size="sm" onClick={() => setFormOpen(true)} className="gap-1.5">
+    <Button onClick={() => setFormOpen(true)} className="gap-2">
       <Plus className="size-4" />
       Nova Copy
     </Button>
@@ -98,61 +114,82 @@ export function ScriptsView({
           action={newButton}
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border/60">
-          <Table className="table-dense">
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[30%]">Copy</TableHead>
-                <TableHead>Oferta</TableHead>
-                <TableHead>Ângulo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-center">Versão</TableHead>
-                <TableHead className="text-right">Palavras</TableHead>
-                <TableHead className="text-right">≈ Duração</TableHead>
-                <TableHead>Responsável</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(({ script, offerCode, angleName, responsibleName }) => (
-                <TableRow key={script.id} className="group">
-                  <TableCell>
-                    <Link href={`/copies/${script.code}`} className="block min-w-0">
-                      <p className="truncate text-sm font-medium group-hover:underline">
-                        {script.title}
-                      </p>
-                      <EntityCode code={script.code} />
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {offerCode}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {angleName ?? EMPTY}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      label={SCRIPT_STATUS_LABELS[script.status]}
-                      tone={SCRIPT_STATUS_TONE[script.status]}
-                    />
-                  </TableCell>
-                  <TableCell className="text-center text-sm">
-                    <span className="rounded bg-accent/60 px-1.5 py-0.5 text-xs font-medium">
-                      V{script.currentVersion}
-                    </span>
-                  </TableCell>
-                  <TableCell className="tabular text-right text-sm">
-                    {integer(script.current.wordCount)}
-                  </TableCell>
-                  <TableCell className="tabular text-right text-sm">
-                    {duration(script.current.estimatedDurationSeconds)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {responsibleName ?? EMPTY}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="space-y-8">
+          {groups.map((group) => (
+            <section key={group.offerId}>
+              <Link
+                href={`/ofertas/${group.offerCode}`}
+                className="group mb-3 flex items-baseline gap-2.5"
+              >
+                <h2 className="text-base font-semibold group-hover:underline">
+                  {group.offerName}
+                </h2>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {group.offerCode}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {group.items.length}{" "}
+                  {group.items.length === 1 ? "copy" : "copies"}
+                </span>
+              </Link>
+
+              <div className="overflow-x-auto rounded-lg border border-border/60">
+                <Table className="table-dense">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[36%]">Copy</TableHead>
+                      <TableHead>Ângulo</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-center">Versão</TableHead>
+                      <TableHead className="text-right">Palavras</TableHead>
+                      <TableHead className="text-right">≈ Locução</TableHead>
+                      <TableHead>Editor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {group.items.map(({ script, angleName, responsibleName }) => (
+                      <TableRow key={script.id} className="group/row">
+                        <TableCell>
+                          <Link
+                            href={`/copies/${script.code}`}
+                            className="block min-w-0"
+                          >
+                            <p className="truncate text-sm font-medium group-hover/row:underline">
+                              {script.title}
+                            </p>
+                            <EntityCode code={script.code} />
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {angleName ?? EMPTY}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            label={SCRIPT_STATUS_LABELS[script.status]}
+                            tone={SCRIPT_STATUS_TONE[script.status]}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center text-sm">
+                          <span className="rounded bg-accent/60 px-1.5 py-0.5 text-xs font-medium">
+                            V{script.currentVersion}
+                          </span>
+                        </TableCell>
+                        <TableCell className="tabular text-right text-sm">
+                          {integer(script.current.wordCount)}
+                        </TableCell>
+                        <TableCell className="tabular text-right text-sm">
+                          {duration(script.current.estimatedDurationSeconds)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {responsibleName ?? EMPTY}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

@@ -51,12 +51,15 @@ export function ScriptFormSheet({
   offers,
   users,
   formats = [],
+  lockedOfferId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   offers: OfferOption[];
   users: UserOption[];
   formats?: { slug: string; name: string }[];
+  /** Workspace da oferta: pre-seleciona e trava a oferta. */
+  lockedOfferId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -81,11 +84,11 @@ export function ScriptFormSheet({
 
   useEffect(() => {
     if (!open) return;
-    setForm(empty);
+    setForm({ ...empty, offerId: lockedOfferId ?? "" });
     setErrors({});
     setShowMore(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, lockedOfferId]);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -156,6 +159,7 @@ export function ScriptFormSheet({
               <Field label="Oferta" error={errors.offerId?.[0]} required>
                 <Select
                   value={form.offerId || undefined}
+                  disabled={!!lockedOfferId}
                   onValueChange={(v) => {
                     set("offerId", v);
                     set("angleId", NONE);
