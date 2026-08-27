@@ -1,0 +1,240 @@
+rules_version = '2';
+
+// =====================================================================
+// Security Rules — espelham src/lib/auth/permissions.ts
+//
+// Ao mudar WRITE_GROUPS ou READ_GROUPS naquele arquivo, mude aqui junto.
+// Os dois precisam concordar: o guard protege o Admin SDK (que ignora
+// estas regras) e estas regras protegem o acesso direto do cliente.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Identidade ──────────────────────────────────────────────────
+    // O papel vem do custom claim: custa zero leitura por avaliacao.
+    function role() {
+      return request.auth != null ? request.auth.token.get('role', '') : '';
+    }
+    function signedIn()  { return request.auth != null && role() != ''; }
+    function hasRole(rs) { return signedIn() && role() in rs; }
+    function isAdmin()   { return hasRole(['owner', 'admin']); }
+    function isOwner()   { return hasRole(['owner']); }
+    function canWrite()  { return signedIn() && role() != 'viewer'; }
+
+    // ── Grupos de escrita ───────────────────────────────────────────
+    function writeOffers()   { return hasRole(['owner', 'admin', 'trafego']); }
+    function writeTraffic()  { return hasRole(['owner', 'admin', 'trafego']); }
+    function writeCreative() { return hasRole(['owner', 'admin', 'criativo', 'trafego']); }
+    function writeOps()      { return hasRole(['owner', 'admin', 'operacao']); }
+    function writeFinance()  { return isAdmin(); }
+
+    // ── Soft delete ─────────────────────────────────────────────────
+    // Entidades com deletedAt precisam nascer com o campo explicitamente
+    // null: uma query `where deletedAt == null` nao encontra documento
+    // onde o campo esta ausente.
+    function hasExplicitDeletedAt() {
+      return 'deletedAt' in request.resource.data
+             && request.resource.data.deletedAt == null;
+    }
+
+    function isNonEmpty(field) {
+      return field is string && field.trim().size() > 0;
+    }
+
+    // ── Usuarios ────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if signedIn();
+
+      // Cada um edita o proprio nome e avatar. Papel e status de ativo
+      // so mudam por server action, que valida "ultimo owner".
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role   == resource.data.role
+        && request.resource.data.active == resource.data.active;
+
+      allow create, delete: if false;
+    }
+
+    // ── Configuracoes e taxonomia ───────────────────────────────────
+    match /settings/{doc} {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Contadores de codigo ────────────────────────────────────────
+    // Somente Admin SDK. Se o cliente pudesse escrever, poderia gerar
+    // codigos duplicados ou pular a sequencia.
+    match /counters/{key} {
+      allow read, write: if false;
+    }
+
+    // ── Ofertas ─────────────────────────────────────────────────────
+    // angles, pages e campaigns vivem embutidos neste documento.
+    match /offers/{offerId} {
+      allow read:   if signedIn();
+      allow create: if writeOffers() && hasExplicitDeletedAt();
+      allow update: if writeOffers();
+      allow delete: if false;  // soft delete: update deletedAt
+    }
+
+    // ── Copies ──────────────────────────────────────────────────────
+    match /scripts/{scriptId} {
+      allow read:   if signedIn();
+      allow create: if writeCreative() && hasExplicitDeletedAt();
+      allow update: if writeCreative();
+      allow delete: if false;
+
+      // Versoes sao imutaveis: cria e nunca mais altera (§20)
+      match /versions/{version} {
+        allow read:   if signedIn();
+        allow create: if writeCreative();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Criativos ───────────────────────────────────────────────────
+    match /creatives/{creativeId} {
+      allow read:   if signedIn();
+      allow create: if writeCreative() && hasExplicitDeletedAt();
+      allow update: if writeCreative();
+      allow delete: if false;
+    }
+
+    // ── Metricas ────────────────────────────────────────────────────
+    // Doc id = `${date}_${offerId}`. Sem campos derivados: CTR, CPA e
+    // ROAS sao calculados pela aplicacao na leitura.
+    match /dailyMetrics/{metricId} {
+      allow read:   if signedIn();
+      allow write:  if writeTraffic()
+        && request.resource.data.spend   >= 0
+        && request.resource.data.revenue >= 0
+        && request.resource.data.sales   >= 0
+        && request.resource.data.leads   >= 0;
+      allow delete: if isAdmin();
+    }
+
+    match /creativeMetrics/{metricId} {
+      allow read:  if signedIn();
+      allow write: if writeTraffic();
+      allow delete: if isAdmin();
+    }
+
+    // ── Testes ──────────────────────────────────────────────────────
+    // §23: nenhum teste vira 'concluido' sem conclusao, proxima acao e
+    // resultado. Esta e a regra que impede o aprendizado de se perder.
+    function experimentLearningComplete() {
+      return request.resource.data.status != 'concluido'
+        || ( isNonEmpty(request.resource.data.conclusion)
+          && isNonEmpty(request.resource.data.nextAction)
+          && request.resource.data.result != null );
+    }
+
+    match /experiments/{experimentId} {
+      allow read:   if signedIn();
+      allow create: if writeTraffic()
+                    && hasExplicitDeletedAt()
+                    && experimentLearningComplete();
+      allow update: if writeTraffic() && experimentLearningComplete();
+      allow delete: if false;
+    }
+
+    // ── Chips ───────────────────────────────────────────────────────
+    match /chips/{chipId} {
+      allow read:   if signedIn();
+      allow create: if writeOps() && hasExplicitDeletedAt();
+      allow update: if writeOps();
+      allow delete: if false;
+
+      // O numero real mora aqui, isolado. Regras do Firestore sao por
+      // documento, entao separar a subcollection e a unica forma de
+      // esconder o telefone de quem nao pode ve-lo.
+      match /secret/{doc} {
+        allow read, write: if writeOps();
+      }
+
+      match /events/{eventId} {
+        allow read:   if signedIn();
+        allow create: if writeOps();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Mineracao ───────────────────────────────────────────────────
+    match /miningItems/{itemId} {
+      allow read:   if signedIn();
+      allow create: if writeTraffic() && hasExplicitDeletedAt();
+      allow update: if writeTraffic();
+      allow delete: if false;
+    }
+
+    // ── Financeiro ──────────────────────────────────────────────────
+    match /partners/{partnerId} {
+      allow read:  if isAdmin();
+      allow write: if writeFinance();
+    }
+
+    // Ledger: 'expense' | 'revenue' | 'contribution' | 'distribution'.
+    // Tráfego ve despesas (precisa para calcular ROI); o resto e admin.
+    function ledgerAntiDoubleCounting() {
+      return ( request.resource.data.kind != 'expense'
+               || !(request.resource.data.category in ['meta_ads', 'gateway'])
+               || request.resource.data.countsInPnl == false )
+          && ( request.resource.data.kind != 'revenue'
+               || request.resource.data.source != 'venda_oferta' );
+    }
+
+    match /ledger/{entryId} {
+      allow read: if resource.data.kind == 'expense'
+                     ? hasRole(['owner', 'admin', 'trafego'])
+                     : isAdmin();
+      allow create: if writeFinance()
+                    && hasExplicitDeletedAt()
+                    && ledgerAntiDoubleCounting();
+      allow update: if writeFinance() && ledgerAntiDoubleCounting();
+      allow delete: if false;
+    }
+
+    // ── Decisoes e tarefas ──────────────────────────────────────────
+    match /decisions/{decisionId} {
+      allow read:  if signedIn();
+      allow write: if writeOffers();
+    }
+
+    match /tasks/{taskId} {
+      allow read:   if signedIn();
+      allow create: if canWrite() && hasExplicitDeletedAt();
+      // Qualquer nao-viewer mexe nas proprias tarefas; admin mexe em todas.
+      allow update: if canWrite() && (
+                         isAdmin()
+                      || resource.data.responsibleId == request.auth.uid
+                      || resource.data.createdBy == request.auth.uid );
+      allow delete: if false;
+    }
+
+    // ── Conhecimento e ferramentas ──────────────────────────────────
+    match /sops/{sopId} {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /tools/{toolId} {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Activity log ────────────────────────────────────────────────
+    // Trilha de auditoria confiavel: o cliente le, nunca escreve.
+    // As entradas nascem exclusivamente do servidor, no mesmo batch da
+    // mutacao de negocio que as originou.
+    match /activity/{logId} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+    }
+
+    // ── Padrao: nega ────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,179 @@
+/**
+ * Cores e rotulos de status.
+ *
+ * Uma oferta "Testando" precisa ter a mesma cor no Kanban, na tabela, no
+ * dashboard e no card. Centralizar aqui e o que garante isso.
+ */
+import type {
+  CreativeStatus,
+  MiningStatus,
+  OfferHealth,
+  OfferStatus,
+  Priority,
+  TaskStatus,
+} from "@/types/domain";
+
+export type StatusTone =
+  | "neutral"
+  | "progress"
+  | "ready"
+  | "live"
+  | "win"
+  | "warn"
+  | "danger"
+  | "dead";
+
+/** Classes Tailwind por tom. Fundo suave + texto forte + borda discreta. */
+export const TONE_CLASSES: Record<StatusTone, string> = {
+  neutral: "bg-status-neutral/10 text-status-neutral border-status-neutral/25",
+  progress: "bg-status-progress/10 text-status-progress border-status-progress/25",
+  ready: "bg-status-ready/10 text-status-ready border-status-ready/25",
+  live: "bg-status-live/10 text-status-live border-status-live/25",
+  win: "bg-status-win/15 text-status-win border-status-win/30",
+  warn: "bg-status-warn/10 text-status-warn border-status-warn/25",
+  danger: "bg-status-danger/10 text-status-danger border-status-danger/25",
+  dead: "bg-status-dead/10 text-status-dead border-status-dead/25",
+};
+
+export const TONE_DOT: Record<StatusTone, string> = {
+  neutral: "bg-status-neutral",
+  progress: "bg-status-progress",
+  ready: "bg-status-ready",
+  live: "bg-status-live",
+  win: "bg-status-win",
+  warn: "bg-status-warn",
+  danger: "bg-status-danger",
+  dead: "bg-status-dead",
+};
+
+/**
+ * Ofertas. O tom conta a historia do funil: cinza enquanto e ideia,
+ * azul enquanto se produz, ciano quando esta pronta, verde quando esta
+ * no ar dando dinheiro, vermelho quando morreu.
+ */
+export const OFFER_STATUS_TONE: Record<OfferStatus, StatusTone> = {
+  minerada: "neutral",
+  pre_analise: "neutral",
+  aprovada: "progress",
+  modelagem: "progress",
+  copy: "progress",
+  criativos: "progress",
+  pagina: "progress",
+  configuracao: "progress",
+  pronta: "ready",
+  testando: "live",
+  validada: "win",
+  escalando: "win",
+  pausada: "warn",
+  morta: "dead",
+};
+
+export const OFFER_HEALTH_TONE: Record<OfferHealth, StatusTone> = {
+  saudavel: "win",
+  atencao: "warn",
+  critico: "danger",
+};
+
+export const OFFER_HEALTH_LABELS: Record<OfferHealth, string> = {
+  saudavel: "Saudável",
+  atencao: "Atenção",
+  critico: "Crítico",
+};
+
+export const CREATIVE_STATUS_TONE: Record<CreativeStatus, StatusTone> = {
+  ideia: "neutral",
+  modelar: "neutral",
+  copy: "progress",
+  aguardando_edicao: "warn",
+  editando: "progress",
+  revisao: "progress",
+  aprovado: "ready",
+  pronto_para_teste: "ready",
+  testando: "live",
+  vencedor: "win",
+  perdedor: "danger",
+  arquivado: "dead",
+};
+
+export const CREATIVE_STATUS_LABELS: Record<CreativeStatus, string> = {
+  ideia: "Ideia",
+  modelar: "Modelar",
+  copy: "Copy",
+  aguardando_edicao: "Aguardando edição",
+  editando: "Editando",
+  revisao: "Revisão",
+  aprovado: "Aprovado",
+  pronto_para_teste: "Pronto p/ teste",
+  testando: "Testando",
+  vencedor: "Vencedor",
+  perdedor: "Perdedor",
+  arquivado: "Arquivado",
+};
+
+export const MINING_STATUS_TONE: Record<MiningStatus, StatusTone> = {
+  encontrada: "neutral",
+  analisar: "progress",
+  interessante: "progress",
+  aprovada: "ready",
+  modelar: "ready",
+  descartada: "dead",
+  convertida: "win",
+};
+
+export const MINING_STATUS_LABELS: Record<MiningStatus, string> = {
+  encontrada: "Encontrada",
+  analisar: "Analisar",
+  interessante: "Interessante",
+  aprovada: "Aprovada",
+  modelar: "Modelar",
+  descartada: "Descartada",
+  convertida: "Convertida",
+};
+
+export const TASK_STATUS_TONE: Record<TaskStatus, StatusTone> = {
+  backlog: "neutral",
+  fazer: "progress",
+  fazendo: "progress",
+  revisao: "warn",
+  concluido: "win",
+};
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  backlog: "Backlog",
+  fazer: "Fazer",
+  fazendo: "Fazendo",
+  revisao: "Revisão",
+  concluido: "Concluído",
+};
+
+export const PRIORITY_TONE: Record<Priority, StatusTone> = {
+  baixa: "neutral",
+  media: "progress",
+  alta: "warn",
+  urgente: "danger",
+};
+
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+  urgente: "Urgente",
+};
+
+/** Colunas do Kanban de ofertas, na ordem do processo de producao. */
+export const OFFER_KANBAN_COLUMNS: OfferStatus[] = [
+  "minerada",
+  "pre_analise",
+  "aprovada",
+  "modelagem",
+  "copy",
+  "criativos",
+  "pagina",
+  "configuracao",
+  "pronta",
+  "testando",
+  "validada",
+  "escalando",
+  "pausada",
+  "morta",
+];

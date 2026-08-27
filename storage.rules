@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// =====================================================================
+// Firebase Storage — criativos e comprovantes.
+// Nenhum bucket publico: tudo exige login.
+// =====================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function role() {
+      return request.auth != null ? request.auth.token.get('role', '') : '';
+    }
+    function signedIn()  { return request.auth != null && role() != ''; }
+    function hasRole(rs) { return signedIn() && role() in rs; }
+    function isAdmin()   { return hasRole(['owner', 'admin']); }
+
+    // Limite de 500 MB por video de criativo
+    function withinVideoLimit() {
+      return request.resource.size < 500 * 1024 * 1024;
+    }
+
+    match /creatives/{offerId}/{fileName} {
+      allow read:  if signedIn();
+      allow write: if hasRole(['owner', 'admin', 'criativo', 'trafego'])
+                   && withinVideoLimit();
+    }
+
+    // Comprovante financeiro: so admin ve
+    match /receipts/{fileName} {
+      allow read, write: if isAdmin();
+    }
+
+    match /avatars/{uid} {
+      allow read:  if signedIn();
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

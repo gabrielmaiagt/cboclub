@@ -128,3 +128,49 @@
     @apply font-sans;
   }
 }
+/* ===================================================================
+   Cores de status.
+   Um token por familia de estado, para que badge, ponto e barra usem
+   exatamente a mesma cor em qualquer tela.
+   =================================================================== */
+:root {
+  --status-neutral: oklch(0.65 0.02 260);
+  --status-progress: oklch(0.72 0.15 245);
+  --status-ready:    oklch(0.78 0.14 190);
+  --status-live:     oklch(0.75 0.17 145);
+  --status-win:      oklch(0.80 0.19 140);
+  --status-warn:     oklch(0.82 0.16 85);
+  --status-danger:   oklch(0.68 0.20 25);
+  --status-dead:     oklch(0.50 0.03 260);
+}
+
+@theme inline {
+  --color-status-neutral:  var(--status-neutral);
+  --color-status-progress: var(--status-progress);
+  --color-status-ready:    var(--status-ready);
+  --color-status-live:     var(--status-live);
+  --color-status-win:      var(--status-win);
+  --color-status-warn:     var(--status-warn);
+  --color-status-danger:   var(--status-danger);
+  --color-status-dead:     var(--status-dead);
+}
+
+/* Tabelas densas: o operador olha muitas linhas por dia */
+.table-dense td,
+.table-dense th {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+/* Numeros alinhados por casa decimal */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar discreta no Kanban */
+.thin-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }
