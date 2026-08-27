@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 import { requireAuth } from "@/lib/auth/guard";
 import { businessDate } from "@/lib/format";
 import { OffersView } from "@/features/offers/components/offers-view";
@@ -12,6 +15,7 @@ import {
 import { listUsers } from "@/services/firestore/users.repo";
 import { deriveFrom } from "@/lib/metrics";
 import type { OfferRow } from "@/features/offers/types";
+import type { AppRole } from "@/types/domain";
 
 export const metadata = { title: "Ofertas" };
 export const dynamic = "force-dynamic";
@@ -35,6 +39,14 @@ function countBy<T>(items: T[], key: (item: T) => string | null): Map<string, nu
 export default async function OffersPage() {
   const ctx = await requireAuth();
 
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <OffersContent role={ctx.role} />
+    </Suspense>
+  );
+}
+
+async function OffersContent({ role }: { role: AppRole }) {
   const today = businessDate();
   const [offers, todayMetrics, users, creatives, scripts, chips] =
     await Promise.all([
@@ -78,7 +90,7 @@ export default async function OffersPage() {
   return (
     <OffersView
       rows={rows}
-      role={ctx.role}
+      role={role}
       users={users.filter((u) => u.active).map((u) => ({ id: u.id, name: u.fullName }))}
     />
   );

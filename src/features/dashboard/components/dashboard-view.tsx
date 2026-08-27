@@ -4,7 +4,6 @@ import Link from "next/link";
 import { AlertTriangle, CircleAlert, Smartphone } from "lucide-react";
 
 import { EntityCode } from "@/components/shared/entity-code";
-import { PageHeader } from "@/components/shared/page-header";
 import { PeriodSelector } from "@/components/shared/period-selector";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
@@ -72,10 +71,10 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Visão Geral"
-        description={`${offerCount} ${offerCount === 1 ? "oferta" : "ofertas"} no sistema · ${running.length} rodando agora`}
-      />
+      <p className="-mt-1 text-sm text-muted-foreground">
+        {offerCount} {offerCount === 1 ? "oferta" : "ofertas"} no sistema ·{" "}
+        {running.length} rodando agora
+      </p>
 
       {/* ── Periodo selecionado ─────────────────────────────────── */}
       <div>

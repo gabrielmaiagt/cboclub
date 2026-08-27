@@ -1,4 +1,8 @@
-import { requireAuth } from "@/lib/auth/guard";
+import { Suspense } from "react";
+
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCardsSkeleton } from "@/components/shared/page-skeleton";
+import { requireAuth, type AuthContext } from "@/lib/auth/guard";
 import { canRead } from "@/lib/auth/permissions";
 import { businessDate } from "@/lib/format";
 import { deriveFrom } from "@/lib/metrics";
@@ -32,11 +36,33 @@ interface PageProps {
  * anterior, ofertas rodando (sempre "hoje" — e o que esta acontecendo
  * agora), fila de lancamento, capacidade de chips e alertas simples
  * calculados na aplicacao — nada de IA.
+ *
+ * A busca pesada roda num componente async separado, dentro de
+ * Suspense: o shell (titulo) aparece na hora, o resto entra quando
+ * chega. Nao existe notFound() aqui, entao streaming e seguro.
  */
 export default async function DashboardPage({ searchParams }: PageProps) {
   const ctx = await requireAuth();
   const { period: rawPeriod } = await searchParams;
   const period = parsePeriod(rawPeriod);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Visão Geral" />
+      <Suspense fallback={<StatCardsSkeleton />}>
+        <DashboardContent ctx={ctx} period={period} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function DashboardContent({
+  ctx,
+  period,
+}: {
+  ctx: AuthContext;
+  period: ReturnType<typeof parsePeriod>;
+}) {
   const today = businessDate();
   const range = periodRange(period, today);
   const prevRange = previousPeriodRange(period, today);
